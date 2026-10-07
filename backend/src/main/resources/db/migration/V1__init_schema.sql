@@ -1,0 +1,33 @@
+CREATE TABLE IF NOT EXISTS usuarios (
+    id BIGSERIAL PRIMARY KEY,
+    tipo VARCHAR(30) NOT NULL,
+    nome VARCHAR(120) NOT NULL,
+    email VARCHAR(160) NOT NULL UNIQUE,
+    senha_hash VARCHAR(255) NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+    pontos_totais INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS livros (
+    id BIGSERIAL PRIMARY KEY,
+    titulo VARCHAR(200) NOT NULL,
+    autor VARCHAR(160) NOT NULL,
+    sinopse TEXT,
+    origem VARCHAR(40) NOT NULL DEFAULT 'DOMINIO_PUBLICO',
+    tipo VARCHAR(40) NOT NULL DEFAULT 'LITERATURA',
+    pontuacao_base INTEGER NOT NULL DEFAULT 10,
+    total_paginas INTEGER NOT NULL DEFAULT 1,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS leituras (
+    id BIGSERIAL PRIMARY KEY,
+    leitor_id BIGINT NOT NULL,
+    livro_id BIGINT NOT NULL,
+    pagina_atual INTEGER NOT NULL DEFAULT 0,
+    concluida BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+CREATE INDEX IF NOT EXISTS idx_leituras_leitor ON leituras(leitor_id);
+CREATE INDEX IF NOT EXISTS idx_leituras_livro ON leituras(livro_id);
