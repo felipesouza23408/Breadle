@@ -36,7 +36,8 @@ public class AuthService {
 
     public LoginResponse login(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getEmail().trim(), request.getSenha())
+            new UsernamePasswordAuthenticationToken(
+                request.getEmail().trim().toLowerCase(Locale.ROOT), request.getSenha())
         );
 
         UserDetails principal = (UserDetails) authentication.getPrincipal();
@@ -64,6 +65,9 @@ public class AuthService {
         }
         if (tipo == null) {
             throw new IllegalArgumentException("O tipo de usuário é obrigatório.");
+        }
+        if (tipo == TipoUsuario.ADMINISTRADOR) {
+            throw new IllegalArgumentException("Tipo de usuário não permitido no cadastro.");
         }
         if (usuarioRepository.findByEmail(email.toLowerCase(Locale.ROOT)).isPresent()) {
             throw new IllegalArgumentException("Já existe um usuário cadastrado com este e-mail.");
