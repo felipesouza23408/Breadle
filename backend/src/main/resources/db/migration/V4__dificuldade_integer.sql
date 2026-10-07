@@ -1,0 +1,1 @@
+ALTER TABLE livros ALTER COLUMN dificuldade TYPE INTEGER;
