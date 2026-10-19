@@ -38,6 +38,9 @@ public class ReadingSession {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "last_progress_at", nullable = false)
+    private Instant lastProgressAt = Instant.now();
+
     @Column(name = "finished_at")
     private Instant finishedAt;
 
@@ -109,6 +112,14 @@ public class ReadingSession {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Instant getLastProgressAt() {
+        return lastProgressAt;
+    }
+
+    public void setLastProgressAt(Instant lastProgressAt) {
+        this.lastProgressAt = lastProgressAt;
     }
 
     public Instant getFinishedAt() {

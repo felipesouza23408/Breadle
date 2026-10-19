@@ -1,1 +1,46 @@
-﻿<router-outlet></router-outlet>
+﻿<div class="app-shell">
+  <header class="top-nav">
+    <a class="nav-brand" [routerLink]="isAuthenticated() ? '/dashboard' : '/'" aria-label="Breadle home" (click)="closeMobileNav()">
+      <span class="brand-mark" aria-hidden="true">
+        <span class="page page-one"></span>
+        <span class="page page-two"></span>
+        <span class="page page-three"></span>
+      </span>
+      <span>BREADLE</span>
+      <span class="brand-caption">Sua próxima história começa aqui</span>
+    </a>
+
+    <button
+      class="mobile-nav-toggle"
+      type="button"
+      (click)="mobileNavOpen = !mobileNavOpen"
+      [attr.aria-expanded]="mobileNavOpen"
+      aria-controls="primary-navigation"
+      aria-label="Alternar navegação"
+    >
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav id="primary-navigation" class="nav-links" [class.is-open]="mobileNavOpen" aria-label="Navegação principal">
+      <ng-container *ngIf="!isAuthenticated(); else authenticatedNav">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileNav()">Home</a>
+        <a routerLink="/login" routerLinkActive="active" (click)="closeMobileNav()">Perfil</a>
+        <a routerLink="/books" routerLinkActive="active" (click)="closeMobileNav()">Acervo</a>
+      </ng-container>
+
+      <ng-template #authenticatedNav>
+        <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileNav()">Visão geral</a>
+        <a routerLink="/books" routerLinkActive="active" (click)="closeMobileNav()">Acervo</a>
+        <a routerLink="/library" routerLinkActive="active" (click)="closeMobileNav()">Minha biblioteca</a>
+        <a routerLink="/missions" routerLinkActive="active" (click)="closeMobileNav()">Missões</a>
+        <a routerLink="/rankings" routerLinkActive="active" (click)="closeMobileNav()">Ranking</a>
+        <a routerLink="/groups" routerLinkActive="active" (click)="closeMobileNav()">Grupos</a>
+        <a routerLink="/chat" routerLinkActive="active" (click)="closeMobileNav()">Chat</a>
+        <a routerLink="/notifications" routerLinkActive="active" (click)="closeMobileNav()">Notificações</a>
+        <a routerLink="/profile" routerLinkActive="active" class="profile-link" (click)="closeMobileNav()">Perfil</a>
+      </ng-template>
+    </nav>
+  </header>
+
+  <router-outlet></router-outlet>
+</div>

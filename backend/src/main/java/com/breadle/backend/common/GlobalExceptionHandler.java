@@ -1,6 +1,7 @@
 package com.breadle.backend.common;
 
 import jakarta.servlet.http.HttpServletRequest;
+import com.breadle.backend.ai.AiQuotaExceededException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,17 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(AiQuotaExceededException.class)
+    public ResponseEntity<ApiError> handleAiQuota(AiQuotaExceededException ex, HttpServletRequest request) {
+        ApiError error = new ApiError(
+            HttpStatus.TOO_MANY_REQUESTS.value(),
+            HttpStatus.TOO_MANY_REQUESTS.getReasonPhrase(),
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {

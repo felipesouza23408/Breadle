@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 public class ReadingSessionRequest {
 
-    @NotNull(message = "O usuário é obrigatório.")
     private Long userId;
 
     @NotNull(message = "O livro é obrigatório.")

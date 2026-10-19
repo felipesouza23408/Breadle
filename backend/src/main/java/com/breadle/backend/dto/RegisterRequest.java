@@ -4,6 +4,7 @@ import com.breadle.backend.entity.TipoUsuario;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class RegisterRequest {
@@ -18,6 +19,10 @@ public class RegisterRequest {
 
     @NotBlank(message = "A senha é obrigatória.")
     @Size(min = 8, max = 255, message = "A senha deve ter no mínimo 8 caracteres.")
+    @Pattern(
+        regexp = "^(?=.*[A-Z])(?=.*\\d)[A-Za-z0-9]{8,}$",
+        message = "A senha deve ter pelo menos 8 caracteres, incluir ao menos uma letra maiúscula, ao menos um número e usar apenas caracteres alfanuméricos."
+    )
     private String senha;
 
     @NotNull(message = "O tipo de usuário é obrigatório.")

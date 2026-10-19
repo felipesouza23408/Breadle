@@ -1,15 +1,297 @@
-﻿html, body {
+:root {
+  --breadle-night: #050506;
+  --breadle-midnight: #11121b;
+  --breadle-ink: #f3f0f8;
+  --breadle-gold: #d9ad39;
+  --breadle-gold-soft: #f1d779;
+  --breadle-olive: #3a5a45;
+  --breadle-fern: #4d8367;
+  --breadle-paper: #f5efe3;
+  --breadle-cream: #fbf7f1;
+  --breadle-rose: #e8c4a0;
+  --breadle-shadow: rgba(0, 0, 0, 0.45);
+  --breadle-border: rgba(255, 255, 255, 0.1);
+  --breadle-surface: #17171c;
+  --breadle-muted: #aaa8b3;
+  --breadle-deep-blue: #1018d5;
+}
+
+html, body {
   margin: 0;
   min-height: 100%;
-  font-family: 'Segoe UI', sans-serif;
-  background: #f4f7fb;
-  color: #172033;
+  font-family: 'Segoe UI', 'Segoe UI Emoji', sans-serif;
+  background: #08080b;
+  color: #f3f0f8;
 }
 
 body {
   min-height: 100vh;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+button, input, textarea {
+  font: inherit;
+}
+
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(214, 169, 74, 0.78);
+  outline-offset: 3px;
+}
+
+::selection {
+  color: #172033;
+  background: #f1d28f;
+}
+
+h1, h2, h3, h4, .brand, .brand-mark {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+main.dashboard, main.groups-page, main.teacher-page {
+  color: var(--breadle-ink);
+  background: radial-gradient(ellipse at 95% 0%, rgba(37, 46, 224, .2), transparent 28rem), var(--breadle-night);
+}
+
+main.dashboard h1, main.dashboard h2, main.groups-page h1, main.groups-page h2,
+main.groups-page h3, main.teacher-page h1, main.teacher-page h2 {
+  color: #fff;
+}
+
+main.dashboard .panel, main.dashboard .card:not(.highlight), main.dashboard .insight-block,
+main.dashboard .education-card, main.dashboard .activity-card,
+main.groups-page .panel, main.teacher-page .panel, main.teacher-page .stat-card:not(.highlight) {
+  color: var(--breadle-ink);
+  background: var(--breadle-surface);
+  border-color: var(--breadle-border);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .3);
+}
+
+main.dashboard .mission-list li, main.dashboard .achievement-list li, main.dashboard .ranking-list li,
+main.dashboard .notification-list li, main.dashboard .education-summary > div,
+main.groups-page .group-card, main.groups-page .mini-item, main.groups-page .leaderboard-item,
+main.groups-page .chat-message, main.teacher-page .student-list li {
+  color: var(--breadle-ink);
+  background: #202027;
+  border-color: rgba(255, 255, 255, .08);
+}
+
+main.dashboard .mission-top span, main.dashboard .mission-meta, main.dashboard .achievement-list small,
+main.dashboard .ranking-list small, main.dashboard .label, main.dashboard .bar-row label span,
+main.dashboard .insight-block span, main.dashboard .insight-block small,
+main.dashboard .notification-list span, main.dashboard .notification-list small,
+main.dashboard .dashboard-error small, main.teacher-page .student-list small,
+main.teacher-page .score small, main.teacher-page .actions li, main.teacher-page .empty-state {
+  color: var(--breadle-muted);
+}
+
+main.dashboard .education-summary strong, main.dashboard .activity-list li,
+main.dashboard .bar-row label, main.dashboard .ranking-points,
+main.groups-page .activity-item strong, main.groups-page .pages-read,
+main.groups-page .group-card h3, main.teacher-page .student-list strong,
+main.teacher-page .score strong {
+  color: var(--breadle-ink);
+}
+
+main.dashboard .bar { background: #303039; }
+main.dashboard .achievement-badge { color: #d4d0da; background: #303039; }
+main.dashboard .achievement-badge.unlocked { color: #a9e0bf; background: rgba(77, 131, 103, .22); }
+main.dashboard .action-button.secondary, main.groups-page .ghost-button {
+  color: var(--breadle-gold-soft);
+  background: rgba(217, 173, 57, .1);
+  border-color: rgba(217, 173, 57, .25);
+}
+main.dashboard .dashboard-error, main.teacher-page .dashboard-error {
+  background: #241a1b;
+  border-color: rgba(255, 190, 180, .2);
+}
+main.dashboard .dashboard-error p, main.teacher-page .dashboard-error p,
+main.groups-page .data-error { color: #ffc2bc; }
+main.dashboard .profile-form label, main.groups-page .group-form label { color: var(--breadle-ink); }
+main.dashboard .profile-form input, main.dashboard .profile-form textarea,
+main.groups-page .group-form input, main.groups-page .group-form textarea,
+main.groups-page .chat-form input {
+  color: #fff;
+  background: #202027;
+  border-color: rgba(255, 255, 255, .14);
+}
+
+main.groups-page .eyebrow, main.teacher-page .brand {
+  color: var(--breadle-gold-soft);
+  background: rgba(217, 173, 57, .12);
+  border-color: rgba(217, 173, 57, .28);
+}
+main.groups-page .group-card p, main.groups-page .empty-state, main.groups-page .card-top span,
+main.groups-page .meta-row span, main.groups-page .meta-row strong, main.groups-page .mini-item span,
+main.groups-page .mini-item small, main.groups-page .leaderboard-item small { color: var(--breadle-muted); }
+main.groups-page .join-button {
+  color: var(--breadle-gold-soft);
+  background: rgba(217, 173, 57, .1);
+  border-color: rgba(217, 173, 57, .25);
+}
+main.groups-page .rank-badge, main.teacher-page .position { color: var(--breadle-gold-soft); }
+main.groups-page .tag { color: #a9e0bf; background: rgba(77, 131, 103, .18); }
+main.groups-page .data-error { padding: .85rem; border-radius: .8rem; background: rgba(105, 35, 35, .18); }
+main.groups-page .data-error p { margin: 0 0 .75rem; }
+main.teacher-page .secondary-link { color: var(--breadle-gold-soft); }
+main.teacher-page .user-pill { color: var(--breadle-ink); background: #202027; }
+main.teacher-page .actions li { border-color: rgba(255, 255, 255, .08); }
+main.teacher-page .dashboard-error { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+main.teacher-page .dashboard-error p { margin: 0; }
+main.teacher-page .dashboard-error small { display: block; margin-top: .35rem; color: var(--breadle-muted); }
+main.teacher-page .loading-state { color: var(--breadle-muted); }
+
+main.reader-shell .reader-toolbar {
+  flex-wrap: wrap;
+  align-items: center;
+}
+main.reader-shell .page-status {
+  display: grid;
+  justify-items: center;
+  gap: .35rem;
+  min-width: 9rem;
+  color: var(--breadle-muted);
+}
+main.reader-shell .page-status progress {
+  width: min(16rem, 32vw);
+  height: .45rem;
+  accent-color: var(--breadle-gold);
+}
+main.reader-shell .reading-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+main.reader-shell .shortcut-hint { flex-basis: 100%; color: var(--breadle-muted); text-align: center; font-size: .78rem; }
+main.reader-shell .reading-tools button,
+main.reader-shell .text-button {
+  border: 1px solid var(--breadle-border);
+  border-radius: .55rem;
+  padding: .55rem .75rem;
+  color: var(--breadle-ink);
+  background: #202027;
+  font-weight: 700;
+  cursor: pointer;
+}
+main.reader-shell .reading-tools button[disabled] { opacity: .5; cursor: not-allowed; }
+main.reader-shell.focus-mode .page-card { max-width: 880px; margin-top: 2rem; }
+main.reader-shell.focus-mode .ai-panel { display: none; }
+main.reader-shell .focus-book-title { max-width: 20rem; overflow: hidden; color: var(--breadle-muted); text-overflow: ellipsis; white-space: nowrap; }
+main.reader-shell .resume-notice { color: var(--breadle-gold-soft); }
+main.reader-shell .sync-state { color: #a9e0bf; }
+main.reader-shell .ai-guidance { margin: .4rem 0 0; color: var(--breadle-muted); }
+main.reader-shell .ai-actions button:disabled { opacity: .5; cursor: not-allowed; }
+main.reader-shell .passage-input {
+  display: grid;
+  gap: .4rem;
+  margin-top: 1rem;
+  color: var(--breadle-muted);
+  font-size: .9rem;
+}
+main.reader-shell .passage-input textarea {
+  width: 100%;
+  min-height: 4rem;
+  resize: vertical;
+  border: 1px solid var(--breadle-border);
+  border-radius: .6rem;
+  padding: .75rem .85rem;
+  color: var(--breadle-ink);
+  background: #202027;
+  font: inherit;
+  line-height: 1.5;
+}
+main.reader-shell .selection-guidance { margin: .4rem 0 0; color: var(--breadle-muted); font-size: .82rem; }
+main.reader-shell .character-input {
+  display: grid;
+  gap: .4rem;
+  margin-top: 1rem;
+  color: var(--breadle-muted);
+  font-size: .9rem;
+}
+main.reader-shell .character-input input {
+  width: min(100%, 28rem);
+  border: 1px solid var(--breadle-border);
+  border-radius: .6rem;
+  padding: .75rem .85rem;
+  color: var(--breadle-ink);
+  background: #202027;
+}
+main.reader-shell .ai-messages {
+  display: grid;
+  gap: .7rem;
+  max-height: 24rem;
+  overflow-y: auto;
+  margin-top: 1rem;
+  padding: .25rem;
+  overscroll-behavior: contain;
+}
+main.reader-shell .ai-message {
+  max-width: min(48rem, 94%);
+  justify-self: start;
+  padding: .8rem 1rem;
+  border: 1px solid var(--breadle-border);
+  border-radius: .85rem .85rem .85rem .2rem;
+  color: var(--breadle-ink);
+  background: #202027;
+}
+main.reader-shell .ai-message.from-reader {
+  justify-self: end;
+  border-color: rgba(217, 173, 57, .25);
+  border-radius: .85rem .85rem .2rem .85rem;
+  background: rgba(217, 173, 57, .1);
+}
+main.reader-shell .ai-message strong { color: var(--breadle-gold-soft); font-size: .82rem; }
+main.reader-shell .ai-message p { margin: .4rem 0 0; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+main.reader-shell .ai-empty { margin: 0; color: var(--breadle-muted); line-height: 1.6; }
+main.reader-shell .ai-usage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-top: .75rem;
+  color: var(--breadle-muted);
+  font-size: .85rem;
+}
+main.reader-shell .ai-usage-error, main.reader-shell .quota-message {
+  margin: .6rem 0 0;
+  color: #ffc2bc;
+  font-size: .9rem;
+}
+main.reader-shell .ai-chat textarea:focus-visible,
+main.reader-shell .character-input input:focus-visible,
+main.reader-shell .passage-input textarea:focus-visible {
+  outline-color: var(--breadle-gold);
+}
+@media (max-width: 640px) {
+  main.reader-shell .reader-toolbar { justify-content: center; }
+  main.reader-shell .reading-tools { width: 100%; justify-content: center; }
+  main.reader-shell .page-status { order: -1; width: 100%; }
+  main.reader-shell .page-status progress { width: min(100%, 22rem); }
+  main.reader-shell .ai-usage { align-items: flex-start; flex-direction: column; }
+  main.reader-shell .ai-actions button { min-height: 2.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

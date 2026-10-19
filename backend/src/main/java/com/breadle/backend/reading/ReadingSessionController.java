@@ -2,20 +2,28 @@ package com.breadle.backend.reading;
 
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/reading")
+@RequestMapping("/reading")
 public class ReadingSessionController {
 
     private final ReadingSessionService readingSessionService;
 
     public ReadingSessionController(ReadingSessionService readingSessionService) {
         this.readingSessionService = readingSessionService;
+    }
+
+    @GetMapping("/sessions")
+    public ResponseEntity<List<ReadingSessionSummary>> listSessions() {
+        return ResponseEntity.ok(readingSessionService.listMySessions());
     }
 
     @PostMapping("/sessions")

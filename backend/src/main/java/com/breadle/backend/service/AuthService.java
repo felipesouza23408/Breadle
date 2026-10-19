@@ -3,6 +3,7 @@ package com.breadle.backend.service;
 import com.breadle.backend.dto.LoginRequest;
 import com.breadle.backend.dto.LoginResponse;
 import com.breadle.backend.dto.RegisterRequest;
+import com.breadle.backend.dto.UpdateProfileRequest;
 import com.breadle.backend.entity.TipoUsuario;
 import com.breadle.backend.entity.Usuario;
 import com.breadle.backend.repository.UsuarioRepository;
@@ -35,15 +36,29 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
+        String email = request.getEmail() == null ? "" : request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String senha = request.getSenha();
+
+        if (email.isBlank()) {
+            throw new IllegalArgumentException("O e-mail é obrigatório.");
+        }
+
+        Usuario usuario = usuarioRepository.findByEmail(email)
+            .orElseThrow(() -> new IllegalArgumentException("E-mail não encontrado."));
+
+        if (senha == null || senha.isBlank()) {
+            throw new IllegalArgumentException("A senha é obrigatória.");
+        }
+
+        if (!passwordEncoder.matches(senha, usuario.getSenhaHash())) {
+            throw new IllegalArgumentException("Senha incorreta.");
+        }
+
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                request.getEmail().trim().toLowerCase(Locale.ROOT), request.getSenha())
+            new UsernamePasswordAuthenticationToken(email, senha)
         );
 
         UserDetails principal = (UserDetails) authentication.getPrincipal();
-        Usuario usuario = usuarioRepository.findByEmail(principal.getUsername())
-            .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado."));
-
         String token = jwtService.generateToken(principal);
         return new LoginResponse(token, usuario.getNome(), usuario.getEmail(), usuario.getTipo().name());
     }
@@ -60,8 +75,8 @@ public class AuthService {
         if (nome == null || nome.isBlank()) {
             throw new IllegalArgumentException("O nome é obrigatório.");
         }
-        if (senha == null || senha.length() < 8) {
-            throw new IllegalArgumentException("A senha deve ter no mínimo 8 caracteres.");
+        if (senha == null || !senha.matches("^(?=.*[A-Z])(?=.*\\d)[A-Za-z0-9]{8,}$")) {
+            throw new IllegalArgumentException("A senha deve ter pelo menos 8 caracteres, incluir ao menos uma letra maiúscula, ao menos um número e usar apenas caracteres alfanuméricos.");
         }
         if (tipo == null) {
             throw new IllegalArgumentException("O tipo de usuário é obrigatório.");
@@ -80,5 +95,37 @@ public class AuthService {
         usuario.setTipo(tipo);
         usuario.setAtivo(true);
         return Optional.of(usuarioRepository.save(usuario));
+    }
+
+    public Usuario updateProfile(String email, UpdateProfileRequest request) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+            .orElseThrow(() -> new IllegalArgumentException("E-mail não encontrado."));
+
+        if (request == null) {
+            return usuario;
+        }
+
+        usuario.setApelido(normalizeField(request.getApelido(), usuario.getApelido(), 80));
+        usuario.setBiografia(normalizeField(request.getBiografia(), usuario.getBiografia(), 500));
+        usuario.setFotoUrl(normalizeField(request.getFotoUrl(), usuario.getFotoUrl(), 255));
+        usuario.setGenero(normalizeField(request.getGenero(), usuario.getGenero(), 40));
+        usuario.setGeneroLiterarioFavorito(normalizeField(request.getGeneroLiterarioFavorito(), usuario.getGeneroLiterarioFavorito(), 80));
+
+        return usuarioRepository.save(usuario);
+    }
+
+    private String normalizeField(String value, String currentValue, int maxLength) {
+        if (value == null) {
+            return currentValue;
+        }
+
+        String normalized = value.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        if (normalized.length() > maxLength) {
+            throw new IllegalArgumentException("Campo com tamanho acima do permitido.");
+        }
+        return normalized;
     }
 }

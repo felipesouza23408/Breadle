@@ -36,6 +36,21 @@ public class Usuario {
     @Column(name = "pontos_totais", nullable = false)
     private Integer pontosTotais = 0;
 
+    @Column(name = "apelido", length = 80)
+    private String apelido;
+
+    @Column(name = "biografia", length = 500)
+    private String biografia;
+
+    @Column(name = "foto_url", length = 255)
+    private String fotoUrl;
+
+    @Column(name = "genero", length = 40)
+    private String genero;
+
+    @Column(name = "genero_literario_favorito", length = 80)
+    private String generoLiterarioFavorito;
+
     public Long getId() {
         return id;
     }
@@ -90,5 +105,45 @@ public class Usuario {
 
     public void setPontosTotais(Integer pontosTotais) {
         this.pontosTotais = pontosTotais;
+    }
+
+    public String getApelido() {
+        return apelido;
+    }
+
+    public void setApelido(String apelido) {
+        this.apelido = apelido;
+    }
+
+    public String getBiografia() {
+        return biografia;
+    }
+
+    public void setBiografia(String biografia) {
+        this.biografia = biografia;
+    }
+
+    public String getFotoUrl() {
+        return fotoUrl;
+    }
+
+    public void setFotoUrl(String fotoUrl) {
+        this.fotoUrl = fotoUrl;
+    }
+
+    public String getGenero() {
+        return genero;
+    }
+
+    public void setGenero(String genero) {
+        this.genero = genero;
+    }
+
+    public String getGeneroLiterarioFavorito() {
+        return generoLiterarioFavorito;
+    }
+
+    public void setGeneroLiterarioFavorito(String generoLiterarioFavorito) {
+        this.generoLiterarioFavorito = generoLiterarioFavorito;
     }
 }

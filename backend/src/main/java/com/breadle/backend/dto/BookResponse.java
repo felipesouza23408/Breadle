@@ -10,5 +10,6 @@ public record BookResponse(
     Integer dificuldade,
     Integer totalPaginas,
     Integer pontuacaoBase,
+    Integer pontosConclusao,
     String capaUrl
 ) {}
