@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Client, IMessage } from '@stomp/stompjs';
 import { Observable, timeout } from 'rxjs';
+import { apiUrl, webSocketUrl } from './api-url';
 
 export interface UserNotification {
   id: number;
@@ -20,7 +21,7 @@ export class NotificationService {
 
   list(): Observable<UserNotification[]> {
     return this.http
-      .get<UserNotification[]>('http://localhost:8080/api/notifications', {
+      .get<UserNotification[]>(apiUrl('/api/notifications'), {
         headers: this.getAuthHeaders(),
       })
       .pipe(timeout(8000));
@@ -28,7 +29,7 @@ export class NotificationService {
 
   markAllAsRead(): Observable<string> {
     return this.http
-      .post<string>('http://localhost:8080/api/notifications/read', {}, {
+      .post<string>(apiUrl('/api/notifications/read'), {}, {
         headers: this.getAuthHeaders(),
       })
       .pipe(timeout(8000));
@@ -40,7 +41,8 @@ export class NotificationService {
     }
 
     this.stompClient = new Client({
-      webSocketFactory: () => new WebSocket('ws://localhost:8080/api/ws/websocket'),
+      webSocketFactory: () => new WebSocket(webSocketUrl('/api/ws/websocket')),
+      connectHeaders: this.getAuthHeaders(),
       reconnectDelay: 5000,
       onConnect: () => {
         this.stompClient?.subscribe(`/topic/notifications/${userId}`, (message: IMessage) => {
@@ -59,19 +61,21 @@ export class NotificationService {
   }
 
   private getAuthHeaders(): { Authorization: string } | Record<string, never> {
+    const token = this.getAuthToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  private getAuthToken(): string | null {
     const raw = localStorage.getItem('breadle.session');
     if (!raw) {
-      return {};
+      return null;
     }
 
     try {
       const session = JSON.parse(raw) as { token?: string };
-      if (!session.token) {
-        return {};
-      }
-      return { Authorization: `Bearer ${session.token}` };
+      return session.token || null;
     } catch {
-      return {};
+      return null;
     }
   }
 }

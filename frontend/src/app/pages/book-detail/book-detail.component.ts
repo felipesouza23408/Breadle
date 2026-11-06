@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { Book, BookService } from '../../services/book.service';
 
@@ -9,136 +9,70 @@ import { Book, BookService } from '../../services/book.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <main class="detail-shell" *ngIf="book; else loading">
-      <header class="topbar">
-        <div>
-          <span class="brand">Breadle</span>
-          <h1>{{ book.titulo }}</h1>
-        </div>
-        <nav class="nav">
-          <a routerLink="/books">Voltar ao acervo</a>
-          <a *ngIf="authService.isAuthenticated()" routerLink="/dashboard">Dashboard</a>
-        </nav>
+    <main class="book-detail-page">
+      <header class="detail-topbar">
+        <a routerLink="/books" class="back-to-books"><span aria-hidden="true">←</span> Voltar ao acervo</a>
+        <a routerLink="/" class="detail-brand">BREADLE</a>
       </header>
 
-      <section class="detail-card">
-        <div class="cover" [ngClass]="book.tipo.toLowerCase()">
-          <span>{{ book.titulo.slice(0, 1) }}</span>
-        </div>
-
-        <div class="meta-block">
-          <a class="author" [routerLink]="['/authors', book.autor]">Conheça {{ book.autor }}</a>
-          <p class="type">{{ book.tipo }} • {{ book.origem }}</p>
-          <p class="synopsis">{{ book.sinopse || 'Sem sinopse disponível.' }}</p>
-          <div class="stats">
-            <span>{{ book.totalPaginas }} páginas</span>
-            <span>{{ book.pontosConclusao | number }} pts ao concluir</span>
-            <span>Dificuldade {{ book.dificuldade }}</span>
-          </div>
-          <a *ngIf="authService.isAuthenticated(); else lockedRead" [routerLink]="['/books', book.id, 'read']" class="read-button">Começar leitura</a>
-          <ng-template #lockedRead>
-            <a routerLink="/login" class="read-button secondary">Entre para ler</a>
-          </ng-template>
-        </div>
+      <p class="detail-state" *ngIf="loading" role="status">Carregando informações do livro...</p>
+      <section class="detail-state error" *ngIf="!loading && errorMessage" role="alert">
+        <p>{{ errorMessage }}</p>
+        <button type="button" (click)="loadBook()">Tentar novamente</button>
       </section>
-    </main>
 
-    <ng-template #loading>
-      <main class="detail-shell">
-        <p class="loading-state" *ngIf="loading" role="status">Carregando livro...</p>
-        <section class="loading-state" *ngIf="!loading && errorMessage" role="alert">
-          <p>{{ errorMessage }}</p>
-          <button type="button" class="read-button" (click)="loadBook()">Tentar novamente</button>
+      <ng-container *ngIf="!loading && book as currentBook">
+        <section class="book-profile">
+          <div class="profile-cover">
+            <img *ngIf="currentBook.capaUrl" [src]="currentBook.capaUrl" [alt]="'Capa de ' + currentBook.titulo" />
+            <div class="cover-art" *ngIf="!currentBook.capaUrl" aria-hidden="true">
+              <span>{{ currentBook.tipo }}</span><strong>{{ currentBook.titulo }}</strong><small>{{ currentBook.autor }}</small>
+            </div>
+          </div>
+          <div class="profile-copy">
+            <span class="detail-eyebrow">{{ currentBook.tipo }} <span aria-hidden="true">·</span> {{ currentBook.origem }}</span>
+            <h1>{{ currentBook.titulo }}</h1>
+            <p class="byline">por <a [routerLink]="['/authors', currentBook.autor]">{{ currentBook.autor }}</a></p>
+            <p class="profile-summary">{{ currentBook.sinopse || 'Não há uma sinopse disponível para esta obra.' }}</p>
+            <div class="book-stats">
+              <div><strong>{{ currentBook.totalPaginas | number }}</strong><span>páginas</span></div>
+              <div><strong>{{ currentBook.dificuldade }}</strong><span>dificuldade</span></div>
+              <div><strong>{{ currentBook.pontosConclusao | number }}</strong><span>pontos ao concluir</span></div>
+            </div>
+            <a *ngIf="authService.isAuthenticated(); else loginToRead" [routerLink]="['/books', currentBook.id, 'read']" class="start-reading">
+              Começar a ler <span aria-hidden="true">→</span>
+            </a>
+            <ng-template #loginToRead><a routerLink="/login" class="start-reading">Entre para começar a ler</a></ng-template>
+          </div>
         </section>
-      </main>
-    </ng-template>
+
+        <section class="book-description">
+          <div>
+            <span class="detail-eyebrow">Sobre a obra</span>
+            <h2>Uma leitura no seu tempo</h2>
+          </div>
+          <p>{{ currentBook.sinopse || 'O acervo ainda não possui uma descrição editorial para esta obra.' }}</p>
+          <a class="author-callout" [routerLink]="['/authors', currentBook.autor]">
+            <span class="author-initial" aria-hidden="true">{{ currentBook.autor.charAt(0) }}</span>
+            <span><small>Conheça também</small><strong>{{ currentBook.autor }}</strong></span>
+            <span class="author-arrow" aria-hidden="true">→</span>
+          </a>
+        </section>
+      </ng-container>
+    </main>
   `,
-  styles: [
-    `
-      :host { display: block; }
-      .detail-shell {
-        min-height: 100vh;
-        background: radial-gradient(circle at top left, rgba(214,169,74,0.14), transparent 25%),
-                    linear-gradient(180deg, #f8f4ee 0%, #edf1f5 100%);
-        padding: 2rem;
-        color: #172033;
-      }
-      .topbar, .nav { display: flex; align-items: center; justify-content: space-between; }
-      .nav { gap: 1rem; }
-      .nav a { color: #172033; text-decoration: none; font-weight: 700; }
-      .brand {
-        display: inline-block;
-        background: rgba(214,169,74,0.12);
-        color: #2b3b58;
-        padding: 0.42rem 0.8rem;
-        border-radius: 999px;
-        border: 1px solid rgba(214,169,74,0.2);
-        font-weight: 800;
-      }
-      h1 { margin: 0.8rem 0 0; color: #1b2c45; }
-      .detail-card {
-        margin-top: 2rem;
-        background: rgba(255,255,255,0.9);
-        border: 1px solid rgba(22,35,48,0.05);
-        border-radius: 1.4rem;
-        box-shadow: 0 14px 30px rgba(23,32,51,0.08);
-        padding: 1.5rem;
-        display: grid;
-        grid-template-columns: 220px 1fr;
-        gap: 2rem;
-      }
-      .cover {
-        min-height: 280px; display: grid; place-items: center; border-radius: 1.2rem; font-size: 3rem; color: white; font-weight: 800;
-      }
-      .cover.literatura { background: linear-gradient(135deg, #213857, #4e7093); }
-      .cover.gibi { background: linear-gradient(135deg, #d1954c, #f1cf8a); color: #1b2c45; }
-      .cover.default { background: linear-gradient(135deg, #304f42, #5f8d75); }
-      .author { font-size: 1.3rem; font-weight: 700; margin: 0; }
-      a.author { display: inline-block; color: #ffe18a; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .2rem; }
-      a.author:hover { color: #fff2c6; }
-      .type { color: #4d677d; font-weight: 600; }
-      .synopsis { color: #42506a; line-height: 1.7; }
-      .stats { display: flex; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; font-weight: 700; color: #2b3b58; }
-      .read-button {
-        display: inline-block;
-        background: linear-gradient(135deg, #1d2b42, #2d486d);
-        color: white;
-        padding: 0.9rem 1.2rem;
-        border-radius: 0.9rem;
-        font-weight: 800;
-        cursor: pointer;
-        text-decoration: none;
-      }
-      .read-button.secondary {
-        background: linear-gradient(135deg, #d9ad39, #f1d779);
-        color: #17130b;
-      }
-      .loading-state { padding: 2rem; text-align: center; }
-      .loading-state { color: #f3f0f8; background: #17171c; border-radius: .8rem; }
-      .detail-shell {
-        background: radial-gradient(ellipse at 95% 0%, rgba(37,46,224,.2), transparent 28rem), #08080b;
-        color: #f3f0f8;
-      }
-      .detail-shell h1 { color: #fff; }
-      .detail-shell .nav a { color: #d7d1de; }
-      .detail-shell .brand { color: #f1d779; background: rgba(217,173,57,.12); border-color: rgba(217,173,57,.28); }
-      .detail-card { color: #f3f0f8; background: #151519; border-color: rgba(255,255,255,.09); box-shadow: 0 18px 40px rgba(0,0,0,.3); }
-      .detail-card .type { color: #f1d779; }
-      .detail-card .synopsis { color: #c8c3ce; }
-      .detail-card .stats { color: #e6d58f; }
-      .detail-card .author { margin: 0; }
-      .read-button { background: linear-gradient(135deg, #1717ca, #343ff3); }
-      .loading-state { color: #f3f0f8; background: #17171c; }
-      @media (max-width: 760px) { .detail-card { grid-template-columns: 1fr; } }
-    `,
-  ],
 })
 export class BookDetailComponent implements OnInit {
   book: Book | null = null;
   loading = true;
   errorMessage = '';
 
-  constructor(private route: ActivatedRoute, private router: Router, public authService: AuthService, private bookService: BookService, private changeDetector: ChangeDetectorRef) {}
+  constructor(
+    private route: ActivatedRoute,
+    public authService: AuthService,
+    private bookService: BookService,
+    private changeDetector: ChangeDetectorRef,
+  ) {}
 
   ngOnInit(): void {
     this.loadBook();
@@ -146,9 +80,15 @@ export class BookDetailComponent implements OnInit {
 
   loadBook(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
+    if (!Number.isInteger(id) || id < 1) {
+      this.loading = false;
+      this.errorMessage = 'Este livro não foi encontrado no acervo.';
+      this.changeDetector.markForCheck();
+      return;
+    }
+
     this.loading = true;
     this.errorMessage = '';
-
     this.bookService.getBook(id).subscribe({
       next: (book) => {
         this.book = book;

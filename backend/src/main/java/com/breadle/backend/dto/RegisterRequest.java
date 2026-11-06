@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.time.LocalDate;
+
 public class RegisterRequest {
 
     @NotBlank(message = "O nome é obrigatório.")
@@ -27,6 +29,13 @@ public class RegisterRequest {
 
     @NotNull(message = "O tipo de usuário é obrigatório.")
     private TipoUsuario tipo;
+
+    @NotNull(message = "A data de nascimento é obrigatória.")
+    private LocalDate dataNascimento;
+
+    @Email(message = "Informe um e-mail válido para o responsável.")
+    @Size(max = 160, message = "O e-mail do responsável é muito longo.")
+    private String emailResponsavel;
 
     public String getNome() {
         return nome;
@@ -58,5 +67,21 @@ public class RegisterRequest {
 
     public void setTipo(TipoUsuario tipo) {
         this.tipo = tipo;
+    }
+
+    public LocalDate getDataNascimento() {
+        return dataNascimento;
+    }
+
+    public void setDataNascimento(LocalDate dataNascimento) {
+        this.dataNascimento = dataNascimento;
+    }
+
+    public String getEmailResponsavel() {
+        return emailResponsavel;
+    }
+
+    public void setEmailResponsavel(String emailResponsavel) {
+        this.emailResponsavel = emailResponsavel;
     }
 }

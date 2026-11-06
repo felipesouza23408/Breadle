@@ -35,21 +35,23 @@ import { AuthService, RegisterPayload } from '../../services/auth.service';
           </label>
 
           <label>
+            <span>Data de nascimento</span>
+            <input type="date" [(ngModel)]="form.dataNascimento" name="dataNascimento" [max]="today" required />
+          </label>
+
+          <label *ngIf="isMinor">
+            <span>E-mail do responsável</span>
+            <input type="email" [(ngModel)]="form.emailResponsavel" name="emailResponsavel"
+              placeholder="responsavel@email.com" required autocomplete="email" />
+          </label>
+
+          <label>
             <span>Senha</span>
             <input type="password" [(ngModel)]="form.senha" name="senha" placeholder="Mínimo 8 caracteres" required />
           </label>
 
-          <label>
-            <span>Tipo de conta</span>
-            <select [(ngModel)]="form.tipo" name="tipo">
-              <option value="LEITOR">Leitor</option>
-              <option value="PROFESSOR">Professor</option>
-              <option value="ADMINISTRADOR">Administrador</option>
-            </select>
-          </label>
-
           <button type="submit" [disabled]="loading">{{ loading ? 'Criando...' : 'Criar conta' }}</button>
-          <p class="hint" *ngIf="message">{{ message }}</p>
+          <p class="hint" *ngIf="message" role="status" aria-live="polite">{{ message }}</p>
         </form>
 
         <a routerLink="/login" class="back-link">← Já tenho conta</a>
@@ -64,18 +66,18 @@ import { AuthService, RegisterPayload } from '../../services/auth.service';
         display: grid;
         place-items: center;
         background:
-          radial-gradient(ellipse at 83% 45%, rgba(60, 76, 255, .42), transparent 38%),
-          linear-gradient(105deg, #030305 0%, #080914 45%, #1716d8 100%);
+          radial-gradient(ellipse at 82% 18%, rgba(84, 42, 168, .28), transparent 34rem),
+          radial-gradient(ellipse at 12% 100%, rgba(255, 217, 0, .07), transparent 28rem),
+          #000;
         padding: 2rem 1rem;
       }
       .register-card {
         width: min(460px, 100%);
-        background: rgba(139, 139, 159, 0.56);
-        border: 1px solid rgba(255,255,255,.2);
-        border-radius: 2rem;
+        background: #1f1f1f;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 1.2rem;
         padding: 2rem clamp(1.25rem, 5vw, 2.5rem);
-        box-shadow: 0 28px 70px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.15);
-        backdrop-filter: blur(22px);
+        box-shadow: 0 24px 70px rgba(0,0,0,.48);
       }
       .header { margin-bottom: 1.2rem; text-align: center; }
       .brand-lockup {
@@ -107,46 +109,50 @@ import { AuthService, RegisterPayload } from '../../services/auth.service';
       .brand-name {
         font-size: clamp(1.8rem, 7vw, 2.45rem);
         letter-spacing: 0.04em;
-        color: #fff;
+        color: var(--breadle-text);
         font-weight: 700;
       }
-      h1 { margin: 0 0 1.2rem; color: #fff; font-size: clamp(1.8rem, 2vw, 2.3rem); }
+      h1 { margin: 0 0 1.2rem; color: var(--breadle-text); font-size: clamp(1.8rem, 2vw, 2.3rem); }
       form {
         display: grid;
         gap: 1rem;
       }
-      label { display: grid; gap: 0.45rem; font-weight: 600; color: rgba(255,255,255,.92); }
+      label { display: grid; gap: 0.45rem; font-weight: 600; color: var(--breadle-text-secondary); }
       input, select {
-        padding: 0.85rem 1rem;
-        border-radius: 0.55rem;
-        border: 1px solid rgba(255,255,255,.14);
+        min-height: 2.9rem;
+        padding: 0.75rem 1rem;
+        border-radius: var(--breadle-radius-small);
+        border: 1px solid rgba(255,255,255,.16);
         font-size: 1rem;
-        color: #fff;
-        background: rgba(31,33,51,.38);
+        color: var(--breadle-text);
+        background: #2a2a2a;
       }
-      input::placeholder { color: rgba(255,255,255,.62); }
+      input::placeholder { color: var(--breadle-text-muted); }
       button {
         width: 100%;
-        border: 1px solid rgba(255,255,255,.25);
-        padding: 0.85rem 1rem;
+        min-height: 2.9rem;
+        border: 1px solid transparent;
+        padding: 0.75rem 1rem;
         border-radius: 999px;
-        background: rgba(235,235,244,.8);
-        color: #292a36;
+        background: var(--breadle-gold);
+        color: #171406;
         font-weight: 800;
         cursor: pointer;
-        box-shadow: 0 10px 22px rgba(0,0,0,.12);
+        transition: background var(--breadle-motion-fast), transform var(--breadle-motion-fast);
       }
-      button:hover:not(:disabled) { background: #fff; }
+      button:hover:not(:disabled) { background: #ffe84a; transform: translateY(-1px); }
+      button:disabled { opacity: .65; cursor: wait; }
       .back-link {
         display: inline-block;
         margin-top: 1rem;
-        color: #fff;
+        color: var(--breadle-text-secondary);
         text-decoration: none;
         font-weight: 700;
       }
+      .back-link:hover { color: var(--breadle-gold); }
       .hint {
         margin: 0;
-        color: #fff;
+        color: var(--breadle-text-secondary);
         font-weight: 700;
         line-height: 1.45;
       }
@@ -159,14 +165,43 @@ export class RegisterComponent {
     email: '',
     senha: '',
     tipo: 'LEITOR',
+    dataNascimento: '',
   };
   loading = false;
   message = '';
 
   constructor(private authService: AuthService, private router: Router, private changeDetector: ChangeDetectorRef) {}
 
+  get today(): string {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${now.getFullYear()}-${month}-${day}`;
+  }
+
+  get isMinor(): boolean {
+    if (!this.form.dataNascimento) {
+      return false;
+    }
+
+    const birthDate = new Date(`${this.form.dataNascimento}T00:00:00`);
+    const eighteenthBirthday = new Date(birthDate);
+    eighteenthBirthday.setFullYear(eighteenthBirthday.getFullYear() + 18);
+    return eighteenthBirthday > new Date(`${this.today}T00:00:00`);
+  }
+
   submit(): void {
     const passwordPattern = /^(?=.*[A-Z])(?=.*\d)[A-Za-z0-9]{8,}$/;
+
+    if (!this.form.dataNascimento) {
+      this.message = 'Informe sua data de nascimento.';
+      return;
+    }
+
+    if (this.isMinor && !this.form.emailResponsavel?.trim()) {
+      this.message = 'Informe o e-mail do responsável.';
+      return;
+    }
 
     if (!passwordPattern.test(this.form.senha)) {
       this.message = 'A senha deve ter pelo menos 8 caracteres, incluir uma letra maiúscula, um número e usar apenas letras e números.';
@@ -177,11 +212,13 @@ export class RegisterComponent {
     this.message = '';
 
     this.authService.register(this.form).subscribe({
-      next: () => {
+      next: (response) => {
         this.loading = false;
-        this.message = 'Conta criada com sucesso! Faça login agora.';
+        this.message = response.message;
         this.changeDetector.markForCheck();
-        setTimeout(() => this.router.navigateByUrl('/login'), 800);
+        setTimeout(() => {
+          this.router.navigateByUrl(response.consentPending ? '/confirm-email?pending=true' : '/login');
+        }, response.consentPending ? 0 : 800);
       },
       error: (error) => {
         this.loading = false;

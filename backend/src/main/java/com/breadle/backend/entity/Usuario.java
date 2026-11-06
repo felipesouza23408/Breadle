@@ -33,6 +33,12 @@ public class Usuario {
     @Column(nullable = false)
     private Boolean ativo = true;
 
+    @Column(name = "consentimento_responsavel_pendente", nullable = false)
+    private Boolean consentimentoResponsavelPendente = false;
+
+    @Column(name = "email_responsavel", length = 160)
+    private String emailResponsavel;
+
     @Column(name = "pontos_totais", nullable = false)
     private Integer pontosTotais = 0;
 
@@ -97,6 +103,22 @@ public class Usuario {
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public Boolean getConsentimentoResponsavelPendente() {
+        return consentimentoResponsavelPendente;
+    }
+
+    public void setConsentimentoResponsavelPendente(Boolean consentimentoResponsavelPendente) {
+        this.consentimentoResponsavelPendente = consentimentoResponsavelPendente;
+    }
+
+    public String getEmailResponsavel() {
+        return emailResponsavel;
+    }
+
+    public void setEmailResponsavel(String emailResponsavel) {
+        this.emailResponsavel = emailResponsavel;
     }
 
     public Integer getPontosTotais() {

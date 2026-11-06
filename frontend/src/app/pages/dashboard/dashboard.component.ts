@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService, UserProfile } from '../../services/auth.service';
 import { GamificationDashboard, GamificationService } from '../../services/gamification.service';
 import { NotificationService, UserNotification } from '../../services/notification.service';
+import { EducationService } from '../../services/education.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -14,12 +15,9 @@ import { NotificationService, UserNotification } from '../../services/notificati
     <main class="dashboard">
       <header class="topbar">
         <div>
-          <span class="brand">Breadle</span>
-          <h1>Dashboard do leitor</h1>
-        </div>
-        <div class="header-actions">
-          <span class="user-pill" *ngIf="profile">{{ profile?.nome }}</span>
-          <button type="button" class="logout-button" (click)="logout()">Sair</button>
+          <span class="brand">SEU ESPAÇO DE LEITURA</span>
+          <h1>Olá, {{ profile?.nome || 'leitor' }}</h1>
+          <p class="dashboard-welcome">Acompanhe seu ritmo e escolha o próximo passo da sua jornada.</p>
         </div>
       </header>
 
@@ -36,7 +34,7 @@ import { NotificationService, UserNotification } from '../../services/notificati
       <section class="cards" *ngIf="gamification">
         <article class="card highlight">
           <span>Pontos totais</span>
-          <strong>{{ getTotalPoints() }}</strong>
+          <strong>{{ getTotalPoints() ?? 'Indisponível' }}</strong>
           <small>pontos acumulados</small>
         </article>
         <article class="card">
@@ -72,8 +70,23 @@ import { NotificationService, UserNotification } from '../../services/notificati
       <section class="quick-actions">
         <a routerLink="/books" class="action-button">Explorar acervo</a>
         <a routerLink="/groups" class="action-button secondary">Grupos de leitura</a>
-        <a routerLink="/books/1" class="action-button secondary">Abrir livro em destaque</a>
+        <a routerLink="/library" class="action-button secondary">Minha biblioteca</a>
         <a *ngIf="isTeacher" routerLink="/teacher" class="action-button secondary">Gerenciar turma</a>
+      </section>
+
+      <section class="panel" *ngIf="profile?.tipo === 'LEITOR'">
+        <h2>Entrar em uma turma</h2>
+        <p>Digite o código de convite compartilhado pelo professor.</p>
+        <form (ngSubmit)="joinTeacherClass()">
+          <label for="class-invitation-code">Código de convite</label>
+          <input id="class-invitation-code" name="invitationCode" [(ngModel)]="invitationCode"
+                 maxlength="64" required autocomplete="off">
+          <button type="submit" class="action-button" [disabled]="joiningClass || !invitationCode.trim()">
+            {{ joiningClass ? 'Entrando...' : 'Entrar na turma' }}
+          </button>
+        </form>
+        <p *ngIf="classJoinMessage" role="status">{{ classJoinMessage }}</p>
+        <p *ngIf="classJoinError" role="alert">{{ classJoinError }}</p>
       </section>
 
       <section class="panel notification-panel" *ngIf="notifications.length">
@@ -192,387 +205,7 @@ import { NotificationService, UserNotification } from '../../services/notificati
       </section>
     </main>
   `,
-  styles: [
-    `
-      :host { display: block; }
-      .dashboard {
-        min-height: 100vh;
-        background: radial-gradient(circle at top left, rgba(214,169,74,0.16), transparent 24%),
-                    linear-gradient(180deg, #f7f1e8 0%, #eef2f7 100%);
-        padding: 2rem;
-        color: #172033;
-      }
-      .topbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 2rem;
-        gap: 1rem;
-      }
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .brand {
-        display: inline-block;
-        background: rgba(214,169,74,0.12);
-        color: #2b3b58;
-        padding: 0.42rem 0.8rem;
-        border-radius: 999px;
-        font-weight: 800;
-        border: 1px solid rgba(214,169,74,0.25);
-      }
-      h1 { margin: 0.8rem 0 0; color: #1d2b42; }
-      .home-link,
-      .logout-button,
-      .user-pill {
-        font-weight: 700;
-      }
-      .home-link {
-        color: #172033;
-        text-decoration: none;
-      }
-      .logout-button {
-        border: none;
-        background: linear-gradient(135deg, #1d2b42, #324d74);
-        color: white;
-        border-radius: 999px;
-        padding: 0.55rem 0.9rem;
-        cursor: pointer;
-      }
-      .user-pill {
-        background: rgba(83, 116, 77, 0.1);
-        color: #355b49;
-        border-radius: 999px;
-        padding: 0.45rem 0.75rem;
-      }
-      .cards {
-        display: grid;
-        grid-template-columns: repeat(4, minmax(180px, 1fr));
-        gap: 1rem;
-      }
-      .insight-banner {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(220px, 1fr));
-        gap: 1rem;
-        margin: 1.2rem 0 2rem;
-      }
-      .insight-block {
-        background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(240,244,250,0.92));
-        border: 1px solid rgba(23,32,51,0.05);
-        border-radius: 1rem;
-        padding: 1rem 1.2rem;
-        box-shadow: 0 12px 28px rgba(23,32,51,0.04);
-      }
-      .insight-block span {
-        display: block;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #4d677d;
-      }
-      .insight-block strong {
-        display: block;
-        margin: 0.4rem 0;
-        font-size: 1.2rem;
-        color: #172033;
-      }
-      .insight-block small {
-        color: #4d677d;
-      }
-      .card {
-        background: rgba(255,255,255,0.9);
-        border: 1px solid rgba(23,32,51,0.04);
-        border-radius: 1.2rem;
-        padding: 1.2rem;
-        box-shadow: 0 12px 28px rgba(23,32,51,0.06);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-      }
-      .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 18px 40px rgba(23,32,51,0.09);
-      }
-      .card.highlight {
-        background: linear-gradient(135deg, #1f2d45, #314d73 55%, #d6a94a 100%);
-        color: white;
-      }
-      .card span, .card small { display: block; color: inherit; opacity: 0.8; }
-      .card strong { display: block; font-size: 2rem; margin: 0.4rem 0; }
-      .quick-actions {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin: 2rem 0;
-      }
-      .action-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.8rem 1.2rem;
-        border-radius: 999px;
-        text-decoration: none;
-        font-weight: 700;
-        background: linear-gradient(135deg, #1d2b42, #2c4b73);
-        color: white;
-      }
-      .action-button.secondary {
-        background: rgba(214,169,74,0.12);
-        color: #2d3e5d;
-        border: 1px solid rgba(214,169,74,0.25);
-      }
-      .notification-panel {
-        margin-bottom: 1.5rem;
-      }
-      .notification-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
-      }
-      .mark-read-button {
-        border: none;
-        background: rgba(214,169,74,0.12);
-        color: #2b3b58;
-        border-radius: 999px;
-        padding: 0.55rem 0.8rem;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .notification-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: grid;
-        gap: 0.8rem;
-      }
-      .notification-list li {
-        display: grid;
-        gap: 0.25rem;
-        padding: 0.8rem 0.9rem;
-        border-radius: 0.8rem;
-        border: 1px solid rgba(23,32,51,0.06);
-        background: #f8fafc;
-      }
-      .notification-list strong { color: #172033; }
-      .notification-list span, .notification-list small { color: #4d677d; }
-      .type-success { border-left: 4px solid #2d7a5f; }
-      .type-info { border-left: 4px solid #4c6d9a; }
-      .type-warning { border-left: 4px solid #d6a94a; }
-      .panel-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(260px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-      }
-      .panel {
-        background: rgba(255,255,255,0.9);
-        border: 1px solid rgba(22, 35, 48, 0.05);
-        border-radius: 1.1rem;
-        padding: 1.25rem;
-        box-shadow: 0 10px 30px rgba(23,32,51,0.04);
-      }
-      .dashboard-error {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        margin-bottom: 1rem;
-      }
-      .dashboard-error p { margin: 0; }
-      .dashboard-error small { display: block; margin-top: .35rem; color: #4d677d; }
-      .dashboard-error button:disabled { opacity: .65; cursor: wait; }
-      .full-width {
-        grid-column: 1 / -1;
-      }
-      .mission-list,
-      .achievement-list,
-      .ranking-list,
-      .profile-list,
-      .activity-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-      .mission-list {
-        display: grid;
-        gap: 1rem;
-      }
-      .mission-list li,
-      .achievement-list li,
-      .ranking-list li {
-        display: grid;
-        gap: 0.45rem;
-      }
-      .mission-top {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .mission-top span,
-      .mission-meta,
-      .achievement-list small,
-      .ranking-list small,
-      .profile-list,
-      .label {
-        color: #4d677d;
-      }
-      .bar-group { display: grid; gap: 1rem; }
-      .bar-row { display: grid; gap: 0.5rem; }
-      .bar-row label { display: flex; justify-content: space-between; gap: .75rem; }
-      .bar-row label span { color: #4d677d; }
-      .bar { height: 10px; background: #edf0f5; border-radius: 999px; overflow: hidden; }
-      .bar span { display: block; height: 100%; background: linear-gradient(90deg, #d6a94a, #7d9bb2); border-radius: inherit; }
-      .achievement-list li {
-        grid-template-columns: auto 1fr;
-        align-items: start;
-        gap: 0.7rem;
-      }
-      .achievement-badge {
-        display: inline-grid;
-        place-items: center;
-        width: 1.7rem;
-        height: 1.7rem;
-        border-radius: 50%;
-        background: #edf0f5;
-        color: #51627a;
-        font-weight: 800;
-      }
-      .achievement-badge.unlocked {
-        background: #eaf8f1;
-        color: #1f7a5f;
-      }
-      .ranking-list {
-        display: grid;
-        gap: 0.8rem;
-      }
-      .ranking-list li {
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.7rem 0.8rem;
-        border-radius: 0.75rem;
-        background: #f7f9fc;
-      }
-      .ranking-position {
-        font-weight: 800;
-        color: #1f7a5f;
-      }
-      .ranking-points {
-        font-weight: 700;
-        color: #172033;
-      }
-      .learning-panel {
-        display: grid;
-        grid-template-columns: 1.3fr 0.7fr;
-        gap: 1rem;
-        margin-bottom: 2rem;
-      }
-      .education-card,
-      .activity-card {
-        background: white;
-        border-radius: 1rem;
-        padding: 1.25rem;
-        box-shadow: 0 10px 30px rgba(23,32,51,0.04);
-      }
-      .education-summary {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(120px, 1fr));
-        gap: 1rem;
-        margin-top: 1rem;
-      }
-      .education-summary > div {
-        background: #f7faf8;
-        border: 1px solid #e4f0ea;
-        border-radius: 0.8rem;
-        padding: 0.8rem;
-        display: grid;
-        gap: 0.35rem;
-      }
-      .label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-      }
-      .activity-list {
-        display: grid;
-        gap: 0.8rem;
-        margin-top: 1rem;
-      }
-      .activity-list li {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        color: #24324e;
-      }
-      .activity-list span {
-        display: inline-grid;
-        place-items: center;
-        width: 1.5rem;
-        height: 1.5rem;
-        border-radius: 50%;
-        background: #edf7f2;
-        color: #1f7a5f;
-        font-weight: 800;
-      }
-      .profile-list {
-        margin: 1rem 0 0;
-        padding-left: 1.1rem;
-        display: grid;
-        gap: 0.8rem;
-      }
-      .panel-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .inline-action,
-      .save-button {
-        border: none;
-        border-radius: 0.75rem;
-        padding: 0.7rem 0.9rem;
-        background: linear-gradient(135deg, #1d2b42, #2d486d);
-        color: white;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .profile-form {
-        display: grid;
-        gap: 0.9rem;
-        margin-top: 1rem;
-      }
-      .profile-form label {
-        display: grid;
-        gap: 0.45rem;
-        font-weight: 600;
-        color: #24324e;
-      }
-      .profile-form input,
-      .profile-form textarea {
-        width: 100%;
-        border: 1px solid rgba(24, 34, 53, 0.12);
-        border-radius: 0.8rem;
-        padding: 0.8rem 0.9rem;
-        font: inherit;
-        resize: vertical;
-      }
-      .form-actions {
-        display: flex;
-        justify-content: flex-end;
-      }
-      .content-grid {
-        display: grid;
-        grid-template-columns: 1.2fr 0.8fr;
-        gap: 1rem;
-      }
-      @media (max-width: 900px) {
-        .cards, .panel-grid, .learning-panel, .content-grid, .insight-banner { grid-template-columns: 1fr; }
-      }
-    `,
-  ],
+
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   profile: UserProfile | null = null;
@@ -582,17 +215,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
   notifications: UserNotification[] = [];
   isEditingProfile = false;
   editForm: Partial<UserProfile> = {};
+  invitationCode = '';
+  joiningClass = false;
+  classJoinMessage = '';
+  classJoinError = '';
 
   constructor(
     private authService: AuthService,
     private gamificationService: GamificationService,
     private notificationService: NotificationService,
+    private educationService: EducationService,
     private router: Router,
     private changeDetector: ChangeDetectorRef,
   ) {}
 
   get isTeacher(): boolean {
     return this.profile?.tipo === 'PROFESSOR';
+  }
+
+  joinTeacherClass(): void {
+    const code = this.invitationCode.trim();
+    if (!code || this.joiningClass) {
+      return;
+    }
+    this.joiningClass = true;
+    this.classJoinMessage = '';
+    this.classJoinError = '';
+    this.educationService.joinTeacherClass(code).subscribe({
+      next: (response) => {
+        this.joiningClass = false;
+        this.invitationCode = '';
+        this.classJoinMessage = `Você entrou na turma ${response.className}.`;
+        this.changeDetector.markForCheck();
+      },
+      error: (error) => {
+        this.joiningClass = false;
+        this.classJoinError = error?.status === 409
+          ? 'Você já faz parte desta turma.'
+          : 'Código inválido ou não foi possível entrar na turma.';
+        this.changeDetector.markForCheck();
+      },
+    });
   }
 
   ngOnInit(): void {
@@ -608,7 +271,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         nome: session.nome,
         email: session.email,
         tipo: session.tipo,
-        pontosTotais: 0,
       };
     }
 
@@ -626,7 +288,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
           nome: session?.nome ?? 'Leitor',
           email: session?.email ?? 'usuario@breadle.com',
           tipo: session?.tipo ?? 'LEITOR',
-          pontosTotais: 0,
         };
         this.loadGamification();
         this.loadNotifications();
@@ -640,8 +301,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.notificationService.disconnect();
   }
 
-  getTotalPoints(): number {
-    return this.profile?.pontosTotais ?? this.gamification?.totalPoints ?? 0;
+  getTotalPoints(): number | null {
+    return this.gamification?.totalPoints ?? this.profile?.pontosTotais ?? null;
   }
 
   getBooksRead(): number {

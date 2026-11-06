@@ -19,7 +19,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class GamificationDashboardServiceTest {
@@ -52,7 +54,7 @@ class GamificationDashboardServiceTest {
         user.setPontosTotais(0);
 
         when(usuarioRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-        when(usuarioRepository.findAll()).thenReturn(List.of(user));
+        when(usuarioRepository.findAllByTipoIn(List.of(TipoUsuario.LEITOR))).thenReturn(List.of(user));
         when(leituraRepository.findByLeitorIdOrderByIdDesc(USER_ID)).thenReturn(List.of());
     }
 
@@ -101,6 +103,43 @@ class GamificationDashboardServiceTest {
         assertEquals(0, dashboard.getWeeklyPages());
         assertEquals(0, dashboard.getReadingStreakDays());
         assertTrue(findMission(dashboard, "Sequência semanal").getProgress() == 0);
+    }
+
+    @Test
+    void generalRankingIncludesOnlyReadersAndUsesPersonalPoints() {
+        Usuario teacher = new Usuario();
+        teacher.setId(8L);
+        teacher.setNome("Professor");
+        teacher.setTipo(TipoUsuario.PROFESSOR);
+        teacher.setPontosTotais(900);
+        Usuario administrator = new Usuario();
+        administrator.setId(9L);
+        administrator.setNome("Administrador");
+        administrator.setTipo(TipoUsuario.ADMINISTRADOR);
+        administrator.setPontosTotais(1200);
+        Usuario reader = userWithPoints(USER_ID, "Leitor", TipoUsuario.LEITOR, 35);
+        when(usuarioRepository.findAllByTipoIn(anyCollection())).thenAnswer(invocation -> {
+            java.util.Collection<TipoUsuario> types = invocation.getArgument(0);
+            return List.of(reader, teacher, administrator).stream()
+                .filter(candidate -> types.contains(candidate.getTipo()))
+                .toList();
+        });
+
+        GamificationDashboardResponse dashboard = service.buildDashboard(USER_ID);
+
+        assertEquals(1, dashboard.getRanking().size());
+        assertEquals("Leitor", dashboard.getRanking().getFirst().getNome());
+        assertEquals(35, dashboard.getRanking().getFirst().getPoints());
+        verify(usuarioRepository).findAllByTipoIn(List.of(TipoUsuario.LEITOR));
+    }
+
+    private Usuario userWithPoints(Long id, String name, TipoUsuario type, int points) {
+        Usuario user = new Usuario();
+        user.setId(id);
+        user.setNome(name);
+        user.setTipo(type);
+        user.setPontosTotais(points);
+        return user;
     }
 
     private ReadingSession session(String status, int pagesRead, Instant createdAt) {

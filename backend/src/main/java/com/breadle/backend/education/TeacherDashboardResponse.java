@@ -6,19 +6,31 @@ public class TeacherDashboardResponse {
     private int totalAlunos;
     private int alunosAtivos;
     private long livrosConcluidos;
-    private int mediaPontos;
+    private long mediaPontosEducacionais;
     private List<StudentProgressDto> topAlunos;
+    private int page;
+    private int size;
+    private boolean hasNext;
 
     public TeacherDashboardResponse() {
     }
 
     public TeacherDashboardResponse(int totalAlunos, int alunosAtivos, long livrosConcluidos,
-                                   int mediaPontos, List<StudentProgressDto> topAlunos) {
+                                   long mediaPontosEducacionais, List<StudentProgressDto> topAlunos) {
+        this(totalAlunos, alunosAtivos, livrosConcluidos, mediaPontosEducacionais, topAlunos, 0, 20, false);
+    }
+
+    public TeacherDashboardResponse(int totalAlunos, int alunosAtivos, long livrosConcluidos,
+                                   long mediaPontosEducacionais, List<StudentProgressDto> topAlunos,
+                                   int page, int size, boolean hasNext) {
         this.totalAlunos = totalAlunos;
         this.alunosAtivos = alunosAtivos;
         this.livrosConcluidos = livrosConcluidos;
-        this.mediaPontos = mediaPontos;
+        this.mediaPontosEducacionais = mediaPontosEducacionais;
         this.topAlunos = topAlunos;
+        this.page = page;
+        this.size = size;
+        this.hasNext = hasNext;
     }
 
     public int getTotalAlunos() {
@@ -45,12 +57,12 @@ public class TeacherDashboardResponse {
         this.livrosConcluidos = livrosConcluidos;
     }
 
-    public int getMediaPontos() {
-        return mediaPontos;
+    public long getMediaPontosEducacionais() {
+        return mediaPontosEducacionais;
     }
 
-    public void setMediaPontos(int mediaPontos) {
-        this.mediaPontos = mediaPontos;
+    public void setMediaPontosEducacionais(long mediaPontosEducacionais) {
+        this.mediaPontosEducacionais = mediaPontosEducacionais;
     }
 
     public List<StudentProgressDto> getTopAlunos() {
@@ -59,5 +71,29 @@ public class TeacherDashboardResponse {
 
     public void setTopAlunos(List<StudentProgressDto> topAlunos) {
         this.topAlunos = topAlunos;
+    }
+
+    public int getPage() {
+        return page;
+    }
+
+    public void setPage(int page) {
+        this.page = page;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public boolean isHasNext() {
+        return hasNext;
+    }
+
+    public void setHasNext(boolean hasNext) {
+        this.hasNext = hasNext;
     }
 }

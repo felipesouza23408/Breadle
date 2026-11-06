@@ -8,68 +8,55 @@ import { Book, BookService } from '../../services/book.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <main class="author-shell">
-      <header class="topbar">
-        <a routerLink="/books" class="back-link">← Voltar ao acervo</a>
-        <span class="brand">Breadle · Autores</span>
+    <main class="author-detail-page">
+      <header class="author-topbar">
+        <a routerLink="/books" class="back-to-books"><span aria-hidden="true">←</span> Voltar ao acervo</a>
+        <a routerLink="/" class="detail-brand">BREADLE</a>
       </header>
 
-      <p class="loading-state" *ngIf="loading" role="status">Carregando informações do autor...</p>
-      <section class="error-state" *ngIf="!loading && errorMessage" role="alert">
+      <p class="author-state" *ngIf="loading" role="status">Carregando informações do autor...</p>
+      <section class="author-state error" *ngIf="!loading && errorMessage" role="alert">
         <p>{{ errorMessage }}</p>
-        <a routerLink="/books" class="action-link">Voltar ao acervo</a>
+        <a routerLink="/books" class="author-action">Voltar ao acervo</a>
       </section>
 
       <ng-container *ngIf="!loading && !errorMessage">
-        <section class="author-card">
-          <span class="eyebrow">AUTOR(A)</span>
-          <h1>{{ authorName }}</h1>
-          <p class="biography">{{ biography }}</p>
-          <p class="catalog-count">
-            {{ books.length }} {{ books.length === 1 ? 'obra disponível no acervo' : 'obras disponíveis no acervo' }}
-          </p>
+        <section class="author-profile">
+          <div class="author-monogram" aria-hidden="true">{{ authorName.charAt(0) }}</div>
+          <div>
+            <span class="detail-eyebrow">AUTOR(A)</span>
+            <h1>{{ authorName }}</h1>
+            <p class="author-biography">{{ biography }}</p>
+            <p class="author-count">{{ books.length }} {{ books.length === 1 ? 'obra disponível' : 'obras disponíveis' }} no acervo</p>
+          </div>
         </section>
 
-        <section class="works-section">
-          <h2>Obras no acervo</h2>
-          <p class="empty-state" *ngIf="!books.length">Ainda não há obras deste autor no acervo.</p>
+        <section class="author-works">
+          <div class="works-heading">
+            <div><span class="detail-eyebrow">NA BIBLIOTECA</span><h2>Obras no acervo</h2></div>
+            <span>{{ books.length }}</span>
+          </div>
+          <p class="author-state" *ngIf="!books.length">Ainda não há obras deste autor no acervo.</p>
           <div class="works-grid" *ngIf="books.length">
-            <article class="work-card" *ngFor="let book of books">
-              <div class="work-info">
-                <span class="work-type">{{ book.tipo }}</span>
-                <h3>{{ book.titulo }}</h3>
-                <p>{{ book.totalPaginas | number }} páginas · {{ book.pontosConclusao | number }} pts ao concluir</p>
+            <article class="author-work" *ngFor="let book of books">
+              <div class="work-cover">
+                <img *ngIf="book.capaUrl" [src]="book.capaUrl" [alt]="'Capa de ' + book.titulo" loading="lazy" />
+                <div *ngIf="!book.capaUrl" class="cover-art" aria-hidden="true">
+                  <span>{{ book.tipo }}</span><strong>{{ book.titulo }}</strong>
+                </div>
               </div>
-              <a [routerLink]="['/books', book.id]" class="action-link">Ver descrição</a>
+              <div class="work-info">
+                <span class="detail-eyebrow">{{ book.tipo }}</span>
+                <h3>{{ book.titulo }}</h3>
+                <p>{{ book.totalPaginas | number }} páginas <span aria-hidden="true">·</span> {{ book.pontosConclusao | number }} pontos ao concluir</p>
+                <a [routerLink]="['/books', book.id]" class="author-action">Ver descrição <span aria-hidden="true">→</span></a>
+              </div>
             </article>
           </div>
         </section>
       </ng-container>
     </main>
   `,
-  styles: [`
-    :host { display: block; }
-    .author-shell { min-height: 100vh; padding: 2rem; color: #f5f3f8; background: radial-gradient(ellipse at 95% 0%,rgba(37,46,224,.2),transparent 28rem),#08080b; }
-    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 2rem; }
-    .back-link { color: #f4f0f9; font-weight: 700; text-decoration: underline; text-underline-offset: .2rem; }
-    .brand { padding: .45rem .75rem; border: 1px solid rgba(217,173,57,.32); border-radius: 999px; color: #ffe18a; background: rgba(217,173,57,.12); font-weight: 800; }
-    .author-card,.work-card,.loading-state,.error-state { border: 1px solid rgba(255,255,255,.1); border-radius: 1.2rem; background: #151519; box-shadow: 0 16px 34px rgba(0,0,0,.28); }
-    .author-card { padding: clamp(1.4rem,4vw,2.5rem); }
-    .eyebrow,.work-type { color: #ffe18a; font-size: .76rem; font-weight: 800; letter-spacing: .1em; }
-    h1 { margin: .6rem 0; color: #fff; font-size: clamp(2rem,6vw,3.2rem); }
-    .biography { max-width: 70ch; color: #e0dce6; font-size: 1.08rem; line-height: 1.75; }
-    .catalog-count { color: #c7c2d0; font-weight: 700; }
-    .works-section { margin-top: 2rem; }
-    h2 { color: #fff; }
-    .works-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 300px),1fr)); gap: 1rem; margin-top: 1rem; }
-    .work-card { display: flex; flex-direction: column; justify-content: space-between; gap: 1rem; padding: 1.2rem; }
-    .work-info h3 { margin: .45rem 0; color: #fff; }
-    .work-info p,.empty-state { color: #d0ccd6; }
-    .action-link { align-self: flex-start; display: inline-block; padding: .7rem 1rem; border-radius: .75rem; color: #fff; background: #2929c9; font-weight: 800; text-decoration: none; }
-    .action-link:hover { background: #4545ef; }
-    .loading-state,.error-state { margin: 1rem 0; padding: 1.3rem; color: #f5f3f8; }
-    @media (max-width: 600px) { .author-shell { padding: 1rem; } .topbar { align-items: flex-start; flex-direction: column; } }
-  `],
 })
 export class AuthorDetailComponent implements OnInit {
   authorName = '';

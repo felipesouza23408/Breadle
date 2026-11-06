@@ -1,9 +1,17 @@
+@use './app/app';
+@use './app/pages/home/home.component';
+@use './app/pages/books/books.component';
+@use './app/pages/book-detail-pages';
+@use './app/pages/gamification-pages';
+@use './app/pages/reading-pages';
+@use './app/pages/social-pages';
+
 :root {
   --breadle-night: #050506;
   --breadle-midnight: #11121b;
   --breadle-ink: #f3f0f8;
-  --breadle-gold: #d9ad39;
-  --breadle-gold-soft: #f1d779;
+  --breadle-gold: #ffd900;
+  --breadle-gold-soft: #ffe86a;
   --breadle-olive: #3a5a45;
   --breadle-fern: #4d8367;
   --breadle-paper: #f5efe3;
@@ -11,9 +19,36 @@
   --breadle-rose: #e8c4a0;
   --breadle-shadow: rgba(0, 0, 0, 0.45);
   --breadle-border: rgba(255, 255, 255, 0.1);
-  --breadle-surface: #17171c;
-  --breadle-muted: #aaa8b3;
-  --breadle-deep-blue: #1018d5;
+  --breadle-border-strong: rgba(255, 255, 255, .28);
+  --breadle-surface: #1f1f1f;
+  --breadle-surface-raised: #2a2a2a;
+  --breadle-muted: #b8b8bf;
+  --breadle-text: #f5f3f7;
+  --breadle-text-secondary: #d0cdd4;
+  --breadle-text-muted: #b8b5bd;
+  --breadle-background: #000;
+  --breadle-lilac: #dcd0ff;
+  --breadle-purple: #542aa8;
+  --breadle-deep-blue: #542aa8;
+  --breadle-font-body: 'Segoe UI', 'Segoe UI Emoji', sans-serif;
+  --breadle-font-display: Georgia, 'Times New Roman', serif;
+  --breadle-space-1: .25rem;
+  --breadle-space-2: .5rem;
+  --breadle-space-3: .75rem;
+  --breadle-space-4: 1rem;
+  --breadle-space-6: 1.5rem;
+  --breadle-space-8: 2rem;
+  --breadle-radius-small: .55rem;
+  --breadle-radius-medium: .85rem;
+  --breadle-radius-large: 1.2rem;
+  --breadle-shadow-small: 0 8px 24px rgba(0, 0, 0, .3);
+  --breadle-shadow-large: 0 18px 48px rgba(0, 0, 0, .5);
+  --breadle-z-header: 30;
+  --breadle-z-drawer: 50;
+  --breadle-z-popover: 60;
+  --breadle-z-bottom-nav: 40;
+  --breadle-motion-fast: 140ms ease;
+  --breadle-motion-normal: 220ms ease;
 }
 
 html, body {
@@ -51,17 +86,26 @@ button, a, input, select, textarea {
 }
 
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: 3px solid rgba(214, 169, 74, 0.78);
+  outline: 3px solid var(--breadle-gold);
   outline-offset: 3px;
 }
 
 ::selection {
-  color: #172033;
-  background: #f1d28f;
+  color: #15120a;
+  background: var(--breadle-gold);
 }
 
 h1, h2, h3, h4, .brand, .brand-mark {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--breadle-font-display);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
 
 main.dashboard, main.groups-page, main.teacher-page {
@@ -273,6 +317,75 @@ main.reader-shell .ai-usage-error, main.reader-shell .quota-message {
   color: #ffc2bc;
   font-size: .9rem;
 }
+main.reader-shell .assessment-panel {
+  display: grid;
+  gap: .9rem;
+  margin-top: 1.4rem;
+  padding: 1rem;
+  border: 1px solid var(--breadle-border);
+  border-radius: 1rem;
+  background: rgba(255,255,255,.025);
+}
+main.reader-shell .assessment-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+main.reader-shell .assessment-heading h3,
+main.reader-shell .assessment-content h4,
+main.reader-shell .assessment-review h4 { margin: 0; color: var(--breadle-gold-soft); }
+main.reader-shell .assessment-heading p,
+main.reader-shell .assessment-empty,
+main.reader-shell .assessment-content p { margin: .35rem 0 0; color: var(--breadle-muted); line-height: 1.55; }
+main.reader-shell .assessment-panel button {
+  min-height: 2.6rem;
+  border: 1px solid rgba(217,173,57,.4);
+  border-radius: .65rem;
+  padding: .55rem .85rem;
+  color: var(--breadle-ink);
+  background: rgba(217,173,57,.12);
+  cursor: pointer;
+}
+main.reader-shell .assessment-panel button:disabled { opacity: .55; cursor: not-allowed; }
+main.reader-shell .assessment-error { margin: 0; color: #ffc2bc; }
+main.reader-shell .assessment-content { display: grid; gap: .85rem; }
+main.reader-shell .assessment-content .assessment-pages { font-size: .85rem; }
+main.reader-shell .assessment-progress { color: var(--breadle-muted); font-size: .86rem; }
+main.reader-shell .assessment-options { display: grid; gap: .55rem; margin: 0; padding: 0; border: 0; }
+main.reader-shell .assessment-options label {
+  display: flex;
+  align-items: flex-start;
+  gap: .65rem;
+  padding: .7rem;
+  border: 1px solid var(--breadle-border);
+  border-radius: .7rem;
+  background: #202027;
+  cursor: pointer;
+}
+main.reader-shell .assessment-options input { margin-top: .25rem; accent-color: var(--breadle-gold); }
+main.reader-shell .assessment-options input:focus-visible,
+main.reader-shell .assessment-answer textarea:focus-visible { outline: 2px solid var(--breadle-gold); outline-offset: 2px; }
+main.reader-shell .assessment-answer { display: grid; gap: .4rem; }
+main.reader-shell .assessment-answer textarea {
+  width: 100%;
+  border: 1px solid var(--breadle-border);
+  border-radius: .65rem;
+  padding: .75rem;
+  color: var(--breadle-ink);
+  background: #202027;
+  resize: vertical;
+}
+main.reader-shell .assessment-feedback {
+  padding: .85rem;
+  border: 1px solid rgba(217,173,57,.3);
+  border-radius: .75rem;
+  background: rgba(217,173,57,.08);
+}
+main.reader-shell .assessment-feedback p,
+main.reader-shell .assessment-review p { margin: .45rem 0; line-height: 1.6; overflow-wrap: anywhere; }
+main.reader-shell .assessment-review { display: grid; gap: .65rem; }
+main.reader-shell .assessment-review article { padding: .75rem; border-left: 2px solid var(--breadle-gold); background: rgba(255,255,255,.025); }
 main.reader-shell .ai-chat textarea:focus-visible,
 main.reader-shell .character-input input:focus-visible,
 main.reader-shell .passage-input textarea:focus-visible {

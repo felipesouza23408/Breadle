@@ -3,11 +3,20 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AiResultResponse, AiService, AiUsageResponse } from '../../services/ai.service';
+import {
+  AiResultResponse,
+  AiService,
+  AiUsageResponse,
+} from '../../services/ai.service';
+import type {
+  AssessmentAnswer,
+  AssessmentQuestion,
+  ReadingAssessment,
+} from '../../services/ai.service';
 import { AuthService } from '../../services/auth.service';
 import { Book, BookPage, BookService } from '../../services/book.service';
 import { ReadingService } from '../../services/reading.service';
-import { Observable, finalize } from 'rxjs';
+import { Observable, concatMap, finalize, from } from 'rxjs';
 
 interface AiChatMessage {
   role: 'reader' | 'assistant';
@@ -38,13 +47,13 @@ interface AiChatMessage {
 
       <section class="reader-panel" *ngIf="pages.length; else empty">
         <div class="reader-toolbar">
-          <button type="button" (click)="prevPage()" [disabled]="currentPage === 0">Anterior</button>
+          <button type="button" (click)="prevPage()" [disabled]="currentPage === 0 || pageOpening">Anterior</button>
           <span class="focus-book-title" *ngIf="focusMode">{{ book.titulo }}</span>
           <div class="page-status">
             <span>Página {{ currentPage + 1 }} de {{ pages.length }}</span>
             <progress [value]="currentPage + 1" [max]="pages.length" aria-label="Progresso neste livro"></progress>
           </div>
-          <button type="button" (click)="nextPage()" [disabled]="currentPage >= pages.length - 1">Próxima</button>
+          <button type="button" (click)="nextPage()" [disabled]="currentPage >= pages.length - 1 || pageOpening">Próxima</button>
           <div class="reading-tools" aria-label="Preferências de leitura">
             <button type="button" aria-label="Diminuir tamanho do texto" title="Diminuir texto"
               (click)="adjustFontSize(-0.1)" [disabled]="fontSize <= 0.95">A−</button>
@@ -61,6 +70,7 @@ interface AiChatMessage {
           <span>{{ isCompleted ? 'Leitura concluída e salva' : 'Progresso salvo: ' + savedPages + ' de ' + pages.length + ' páginas' }}</span>
           <span class="resume-notice" *ngIf="resumedSession">Você retomou de onde parou.</span>
           <span class="sync-state" *ngIf="progressSyncing" role="status">Sincronizando…</span>
+          <button type="button" *ngIf="hasPendingProgress" (click)="retryPendingProgress()">Tentar sincronizar novamente</button>
         </div>
 
         <article class="page-card" (mouseup)="captureSelectedPassage()" (touchend)="captureSelectedPassage()"
@@ -115,7 +125,9 @@ interface AiChatMessage {
           </div>
 
           <div class="ai-chat">
+            <label class="visually-hidden" for="reader-question">Pergunta sobre a leitura</label>
             <textarea
+              id="reader-question"
               rows="3"
               [(ngModel)]="customPrompt"
               maxlength="1000"
@@ -135,6 +147,71 @@ interface AiChatMessage {
           <p class="quota-message" *ngIf="quotaExhausted" role="status">
             Sua cota diária foi usada. Ela será renovada {{ resetLabel }}; sua leitura continua normalmente.
           </p>
+
+          <section class="assessment-panel" aria-labelledby="assessment-title">
+            <div class="assessment-heading">
+              <div>
+                <h3 id="assessment-title">Quiz da sessão</h3>
+                <p>Três perguntas com base somente nas páginas que você abriu nesta sessão.</p>
+              </div>
+              <button type="button" (click)="generateSessionAssessment()"
+                [disabled]="quizLoading || !sessionId || pageOpening">
+                {{ assessment ? 'Reabrir quiz' : 'Gerar quiz' }}
+              </button>
+            </div>
+            <p *ngIf="quizLoading" role="status" aria-live="polite">Preparando as perguntas das páginas registradas…</p>
+            <p *ngIf="quizError" class="assessment-error" role="alert">{{ quizError }}</p>
+            <p *ngIf="!assessment && !quizLoading && !quizError" class="assessment-empty">
+              Abra pelo menos uma página da sessão para criar uma avaliação.
+            </p>
+            <div *ngIf="assessment" class="assessment-content">
+              <p class="assessment-pages">Base da avaliação: páginas {{ assessment.pages.join(', ') }}.</p>
+              <ng-container *ngIf="currentAssessmentQuestion as question; else assessmentFinished">
+                <div class="assessment-progress" aria-live="polite">
+                  Pergunta {{ currentAssessmentIndex + 1 }} de {{ assessment.questions.length }}
+                  · {{ assessmentDifficultyLabel(question.difficulty) }}
+                </div>
+                <h4>{{ question.prompt }}</h4>
+                <fieldset *ngIf="question.type === 'MULTIPLE_CHOICE'" class="assessment-options"
+                  [disabled]="!!currentAssessmentResult || quizAnswerLoading">
+                  <legend class="visually-hidden">Escolha uma alternativa</legend>
+                  <label *ngFor="let option of question.options; let optionIndex = index">
+                    <input type="radio" name="assessment-option" [value]="optionIndex"
+                      [(ngModel)]="selectedAssessmentOption" />
+                    <span>{{ option }}</span>
+                  </label>
+                </fieldset>
+                <label *ngIf="question.type !== 'MULTIPLE_CHOICE'" class="assessment-answer">
+                  <span>Sua resposta</span>
+                  <textarea [(ngModel)]="assessmentAnswer" [name]="'assessment-answer-' + question.id"
+                    rows="3" maxlength="2000" placeholder="Escreva com suas palavras e, na inferência, indique uma pista do texto."
+                    [disabled]="!!currentAssessmentResult || quizAnswerLoading"></textarea>
+                </label>
+                <button *ngIf="!currentAssessmentResult" type="button" class="assessment-submit"
+                  (click)="submitAssessmentAnswer()"
+                  [disabled]="quizAnswerLoading || !canSubmitAssessmentAnswer(question)">
+                  {{ quizAnswerLoading ? 'Conferindo…' : 'Enviar resposta' }}
+                </button>
+                <div *ngIf="currentAssessmentResult" class="assessment-feedback" aria-live="polite" role="status">
+                  <strong>{{ currentAssessmentResult.correct ? 'Boa leitura!' : 'Vamos observar outra pista.' }}</strong>
+                  <p>{{ currentAssessmentResult.feedback }}</p>
+                  <button type="button" (click)="nextAssessmentQuestion()">
+                    {{ currentAssessmentIndex + 1 < assessment.questions.length ? 'Próxima pergunta' : 'Ver revisão' }}
+                  </button>
+                </div>
+              </ng-container>
+              <ng-template #assessmentFinished>
+                <p class="assessment-finished" role="status">Você concluiu as perguntas. O quiz não altera seus pontos de leitura.</p>
+                <section *ngIf="incorrectAssessmentResults.length" class="assessment-review" aria-label="Revisão das respostas">
+                  <h4>Revisão para continuar aprendendo</h4>
+                  <article *ngFor="let result of incorrectAssessmentResults">
+                    <strong>{{ assessmentQuestionFor(result.questionId)?.prompt }}</strong>
+                    <p>{{ result.feedback }}</p>
+                  </article>
+                </section>
+              </ng-template>
+            </div>
+          </section>
         </section>
       </section>
 
@@ -154,62 +231,7 @@ interface AiChatMessage {
       </main>
     </ng-template>
   `,
-  styles: [
-    `
-      :host { display: block; }
-      .reader-shell {
-        min-height: 100vh;
-        background: radial-gradient(ellipse at 100% 0%, rgba(38, 43, 218, .17), transparent 28rem), #08080b;
-        padding: clamp(1rem, 3vw, 2.5rem);
-        color: #f3f0f8;
-      }
-      .topbar, .nav { display: flex; align-items: center; justify-content: space-between; }
-      .nav { gap: 1rem; }
-      .nav a { color: #d6d1de; text-decoration: none; font-weight: 700; }
-      .brand { display: inline-block; background: rgba(217,173,57,.12); color: #f1d779; padding: 0.4rem 0.75rem; border-radius: 0.5rem; font-weight: 800; }
-      h1 { margin: 0.8rem 0 0; }
-      .reader-panel { margin-top: 2rem; }
-      .reader-toolbar, .status-row {
-        display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: #17171c; color: #f3f0f8; border: 1px solid rgba(255,255,255,.08); border-radius: .8rem; padding: 1rem 1.25rem; box-shadow: 0 12px 24px rgba(0,0,0,.25);
-      }
-      .status-row { margin-top: 1rem; }
-      .reader-toolbar button, .finish-button, .ai-actions button, .chat-button {
-        border: 1px solid rgba(255,255,255,.14); background: #1717cb; color: white; padding: 0.7rem 1rem; border-radius: 0.55rem; font-weight: 700; cursor: pointer;
-      }
-      .ai-actions button { background: #25252d; color: #e8d587; }
-      .reader-toolbar button[disabled], .finish-button[disabled] { opacity: 0.45; cursor: not-allowed; }
-      .page-card {
-        max-width: 1000px; margin: 1.25rem auto; background: #f7f2e7; color: #25231f; border: 1px solid #d4b963; border-radius: .35rem; box-shadow: 0 14px 42px rgba(0,0,0,.4); padding: clamp(1.25rem, 4vw, 3rem); line-height: 1.95; white-space: pre-wrap; font: 1.05rem/1.95 Georgia, 'Times New Roman', serif;
-      }
-      .ai-panel {
-        margin-top: 1.5rem; background: #141418; color: #f3f0f8; border: 1px solid rgba(255,255,255,.09); border-radius: .9rem; padding: 1.25rem; box-shadow: 0 12px 24px rgba(0,0,0,.25);
-      }
-      .ai-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
-      .ai-header h2 { margin: 0; }
-      .ai-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-      .ai-chat { display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; margin-top: 1rem; }
-      .ai-chat textarea {
-        width: 100%; resize: vertical; border: 1px solid rgba(255,255,255,.14); border-radius: 0.65rem; padding: 0.8rem 1rem; color: #fff; background: #202027; font: inherit;
-      }
-      .ai-output {
-        margin-top: 1rem; background: #202027; border: 1px solid rgba(255,255,255,.1); border-radius: 0.7rem; padding: 1rem; white-space: pre-wrap;
-      }
-      .ai-spinner {
-        display: inline-block; width: 0.9rem; height: 0.9rem; margin-right: 0.5rem;
-        border: 2px solid #b7b3c0; border-top-color: #d9ad39; border-radius: 50%;
-        vertical-align: -0.15rem; animation: spin 0.8s linear infinite;
-      }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .ai-empty {
-        margin-top: 1rem; color: #aaa8b3; padding: 0.75rem 0.5rem;
-      }
-      .empty-state, .loading-state { background: #17171c; color: #f3f0f8; border: 1px solid rgba(255,255,255,.08); border-radius: .8rem; padding: 1.5rem; box-shadow: 0 12px 24px rgba(0,0,0,.25); }
-      .reader-alert { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: 1rem; border: 1px solid rgba(255,190,180,.28); border-radius: .8rem; color: #ffc2bc; background: rgba(105,35,35,.18); }
-      .reader-alert p { margin: 0; }
-      .reader-alert button, .empty-state button { border: 1px solid rgba(217,173,57,.28); border-radius: 999px; padding: .65rem .9rem; color: #f1d779; background: rgba(217,173,57,.1); font: inherit; font-weight: 700; cursor: pointer; }
-      @media (max-width: 640px) { .reader-toolbar, .status-row, .ai-header, .ai-chat { flex-direction: column; } .ai-chat { display: flex; } }
-    `,
-  ],
+
 })
 export class BookReaderComponent implements OnInit {
   book: Book | null = null;
@@ -222,15 +244,26 @@ export class BookReaderComponent implements OnInit {
   resumedSession = false;
   progressSyncing = false;
   private pendingProgressUpdates = 0;
+  private retryingPendingProgress = false;
   private sessionResolutionStarted = false;
   bookLoading = true;
   pagesLoading = true;
   readerError = '';
+  pageOpening = false;
   aiBusy = false;
   customPrompt = '';
   aiUsage: AiUsageResponse | null = null;
   aiUsageError = '';
   aiMessages: AiChatMessage[] = [];
+  assessment: ReadingAssessment | null = null;
+  currentAssessmentIndex = 0;
+  assessmentAnswer = '';
+  selectedAssessmentOption: number | null = null;
+  currentAssessmentResult: AssessmentAnswer | null = null;
+  assessmentResults: AssessmentAnswer[] = [];
+  quizLoading = false;
+  quizAnswerLoading = false;
+  quizError = '';
   selectedPassage = '';
   characterName = '';
   focusMode = false;
@@ -238,6 +271,14 @@ export class BookReaderComponent implements OnInit {
 
   get quotaExhausted(): boolean {
     return this.aiUsage !== null && this.aiUsage.remainingToday <= 0;
+  }
+
+  get currentAssessmentQuestion(): AssessmentQuestion | null {
+    return this.assessment?.questions[this.currentAssessmentIndex] ?? null;
+  }
+
+  get incorrectAssessmentResults(): AssessmentAnswer[] {
+    return this.assessmentResults.filter((result) => !result.correct);
   }
 
   get resetLabel(): string {
@@ -342,7 +383,7 @@ export class BookReaderComponent implements OnInit {
 
     this.bookService.getBookPages(id).subscribe({
       next: (pages) => {
-        this.pages = pages;
+        this.pages = pages.map((page) => ({ number: page.number, content: '' }));
         this.currentPage = 0;
         this.pagesLoading = false;
         if (!pages.length) {
@@ -361,23 +402,24 @@ export class BookReaderComponent implements OnInit {
     });
   }
 
+  @HostListener('window:online')
+  onConnectionRestored(): void {
+    this.retryPendingProgress();
+  }
+
   getCurrentPage(): BookPage | undefined {
     return this.pages[this.currentPage];
   }
 
   prevPage(): void {
-    if (this.currentPage > 0) {
-      this.currentPage -= 1;
-      this.selectedPassage = '';
-      this.syncProgress();
+    if (this.currentPage > 0 && !this.pageOpening) {
+      this.openPageAt(this.currentPage - 1);
     }
   }
 
   nextPage(): void {
-    if (this.currentPage < this.pages.length - 1) {
-      this.currentPage += 1;
-      this.selectedPassage = '';
-      this.syncProgress();
+    if (this.currentPage < this.pages.length - 1 && !this.pageOpening) {
+      this.openPageAt(this.currentPage + 1);
     }
   }
 
@@ -395,22 +437,48 @@ export class BookReaderComponent implements OnInit {
     this.sessionResolutionStarted = true;
     this.readingService.listMySessions().subscribe({
       next: (sessions) => {
+        const pendingSessionIds = new Set(
+          this.readingService.getPendingProgress(this.userId!).map((progress) => progress.sessionId),
+        );
         const activeSession = sessions.find((session) =>
           session.bookId === bookId
           && session.status === 'ACTIVE'
           && session.pagesDefined === this.pages.length,
         );
-        if (activeSession) {
-          this.sessionId = activeSession.id;
-          this.savedPages = activeSession.pagesRead;
+        const queuedCompletedSession = sessions.find((session) =>
+          session.bookId === bookId
+          && session.status === 'COMPLETED'
+          && session.pagesDefined === this.pages.length
+          && pendingSessionIds.has(session.id),
+        );
+        const sessionToResume = activeSession ?? queuedCompletedSession;
+        if (sessionToResume) {
+          this.sessionId = sessionToResume.id;
+          this.savedPages = sessionToResume.pagesRead;
+          this.isCompleted = sessionToResume.status === 'COMPLETED';
+          const queuedProgress = this.readingService.getPendingProgress(this.userId!)
+            .find((progress) => progress.sessionId === sessionToResume.id);
+          const resumePages = Math.max(sessionToResume.pagesRead, queuedProgress?.pagesRead ?? 0);
           this.currentPage = Math.min(
-            Math.max(activeSession.pagesRead - 1, 0),
+            Math.max(resumePages - 1, 0),
             this.pages.length - 1,
           );
-          this.resumedSession = activeSession.pagesRead > 0;
-          if (activeSession.pagesRead >= this.pages.length) {
-            this.syncProgress();
-          }
+          this.resumedSession = resumePages > 0;
+          const firstPageToOpen = resumePages > sessionToResume.pagesRead
+            ? Math.max(sessionToResume.pagesRead + 1, 1)
+            : Math.max(Math.min(sessionToResume.pagesRead, this.pages.length), 1);
+          this.openPagesForResume(
+            sessionToResume.id,
+            firstPageToOpen,
+            Math.max(1, Math.min(resumePages, this.pages.length)),
+            () => {
+              if (activeSession && activeSession.pagesRead >= this.pages.length && !queuedProgress) {
+                this.syncProgress();
+              } else {
+                this.retryPendingProgress();
+              }
+            },
+          );
           this.changeDetector.markForCheck();
           return;
         }
@@ -440,12 +508,77 @@ export class BookReaderComponent implements OnInit {
         this.savedPages = session.pagesRead;
         this.isCompleted = session.status === 'COMPLETED';
         this.resumedSession = false;
-        this.changeDetector.markForCheck();
+        this.currentPage = 0;
+        this.openPagesForResume(session.id, 1, 1, () => this.syncProgress());
       },
       error: () => {
         this.sessionId = null;
         this.sessionResolutionStarted = false;
         this.readerError = 'A leitura foi carregada, mas não foi possível sincronizar seu progresso.';
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  private openPagesForResume(
+    sessionId: number,
+    firstPage: number,
+    throughPage: number,
+    onComplete: () => void,
+  ): void {
+    if (!this.userId || firstPage < 1 || throughPage < firstPage) {
+      return;
+    }
+
+    this.pageOpening = true;
+    this.readerError = '';
+    const userId = this.userId;
+    from(Array.from({ length: throughPage - firstPage + 1 }, (_, index) => firstPage + index)).pipe(
+      concatMap((pageNumber) => this.readingService.openPage(sessionId, pageNumber)),
+    ).subscribe({
+      next: (page) => {
+        const index = page.number - 1;
+        if (index >= 0 && index < this.pages.length) {
+          this.pages[index] = page;
+        }
+      },
+      error: () => {
+        this.pageOpening = false;
+        this.readerError = 'Não foi possível abrir esta página na sessão de leitura. Tente novamente.';
+        this.changeDetector.markForCheck();
+      },
+      complete: () => {
+        this.pageOpening = false;
+        if (this.userId === userId && this.sessionId === sessionId) {
+          onComplete();
+        }
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  private openPageAt(targetPage: number): void {
+    if (!this.sessionId || targetPage < 0 || targetPage >= this.pages.length) {
+      return;
+    }
+
+    const previousPage = this.currentPage;
+    const sessionId = this.sessionId;
+    this.currentPage = targetPage;
+    this.selectedPassage = '';
+    this.pageOpening = true;
+    this.readerError = '';
+    this.readingService.openPage(sessionId, targetPage + 1).subscribe({
+      next: (page) => {
+        this.pages[targetPage] = page;
+        this.pageOpening = false;
+        this.syncProgress();
+        this.changeDetector.markForCheck();
+      },
+      error: () => {
+        this.currentPage = previousPage;
+        this.pageOpening = false;
+        this.readerError = 'Não foi possível abrir esta página na sessão de leitura. Tente novamente.';
         this.changeDetector.markForCheck();
       },
     });
@@ -502,6 +635,119 @@ export class BookReaderComponent implements OnInit {
     }
 
     this.requestAiResponse(request, errorMessage, readerPrompt);
+  }
+
+  generateSessionAssessment(): void {
+    if (!this.sessionId || this.quizLoading || this.pageOpening) {
+      return;
+    }
+    this.quizLoading = true;
+    this.quizError = '';
+    this.changeDetector.markForCheck();
+    this.readingService.createAssessment(this.sessionId).pipe(
+      finalize(() => {
+        this.quizLoading = false;
+        this.changeDetector.markForCheck();
+      }),
+    ).subscribe({
+      next: (assessment) => {
+        this.assessment = assessment;
+        this.currentAssessmentIndex = 0;
+        this.assessmentAnswer = '';
+        this.selectedAssessmentOption = null;
+        this.currentAssessmentResult = null;
+        this.assessmentResults = [];
+        this.quizError = '';
+        this.loadAiUsage();
+        this.changeDetector.markForCheck();
+      },
+      error: (error: unknown) => {
+        this.quizError = this.assessmentErrorMessage(error, 'Não foi possível gerar o quiz da sessão.');
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  canSubmitAssessmentAnswer(question: AssessmentQuestion): boolean {
+    return question.type === 'MULTIPLE_CHOICE'
+      ? this.selectedAssessmentOption !== null
+      : !!this.assessmentAnswer.trim();
+  }
+
+  submitAssessmentAnswer(): void {
+    const question = this.currentAssessmentQuestion;
+    if (!this.sessionId || !question || !this.canSubmitAssessmentAnswer(question)
+        || this.quizAnswerLoading || this.currentAssessmentResult) {
+      return;
+    }
+    const isMultipleChoice = question.type === 'MULTIPLE_CHOICE';
+    const answer = isMultipleChoice ? null : this.assessmentAnswer.trim();
+    const selectedOption = isMultipleChoice ? this.selectedAssessmentOption : null;
+    this.quizAnswerLoading = true;
+    this.quizError = '';
+    this.readingService.answerAssessmentQuestion(
+      this.sessionId,
+      question.id,
+      answer,
+      selectedOption,
+    ).pipe(
+      finalize(() => {
+        this.quizAnswerLoading = false;
+        this.changeDetector.markForCheck();
+      }),
+    ).subscribe({
+      next: (result) => {
+        this.currentAssessmentResult = result;
+        this.assessmentResults = [
+          ...this.assessmentResults.filter((item) => item.questionId !== result.questionId),
+          result,
+        ];
+        if (!isMultipleChoice) {
+          this.loadAiUsage();
+        }
+        this.changeDetector.markForCheck();
+      },
+      error: (error: unknown) => {
+        this.quizError = this.assessmentErrorMessage(error, 'Não foi possível corrigir sua resposta. Tente novamente.');
+        this.changeDetector.markForCheck();
+      },
+    });
+  }
+
+  nextAssessmentQuestion(): void {
+    if (!this.currentAssessmentResult || !this.assessment) {
+      return;
+    }
+    this.currentAssessmentIndex += 1;
+    this.currentAssessmentResult = null;
+    this.assessmentAnswer = '';
+    this.selectedAssessmentOption = null;
+    this.quizError = '';
+  }
+
+  assessmentQuestionFor(questionId: number): AssessmentQuestion | undefined {
+    return this.assessment?.questions.find((question) => question.id === questionId);
+  }
+
+  assessmentDifficultyLabel(difficulty: AssessmentQuestion['difficulty']): string {
+    return difficulty === 'EASY' ? 'fácil' : difficulty === 'MEDIUM' ? 'média' : 'desafiadora';
+  }
+
+  private assessmentErrorMessage(error: unknown, fallback: string): string {
+    if (!(error instanceof HttpErrorResponse)) {
+      return error instanceof Error ? error.message : fallback;
+    }
+    const serverMessage = typeof error.error?.message === 'string' ? error.error.message : '';
+    if (error.status === 429) {
+      if (this.aiUsage) {
+        this.aiUsage = { ...this.aiUsage, remainingToday: 0 };
+      }
+      return serverMessage || 'Sua cota diária de IA foi usada. Tente novamente após a renovação.';
+    }
+    if (error.status === 0) {
+      return 'Não foi possível conectar ao serviço. Verifique a conexão e tente novamente.';
+    }
+    return serverMessage || fallback;
   }
 
   askCustomQuestion(): void {
@@ -611,30 +857,124 @@ export class BookReaderComponent implements OnInit {
   }
 
   private syncProgress(): void {
-    if (!this.sessionId) {
+    if (!this.sessionId || !this.userId || !this.pages.length) {
       return;
     }
 
     const pagesRead = Math.min(this.currentPage + 1, this.pages.length);
+    this.readingService.queueProgress(this.userId, this.sessionId, pagesRead);
     this.pendingProgressUpdates += 1;
     this.progressSyncing = true;
-    this.readingService.updateProgress(this.sessionId, {
+    const userId = this.userId;
+    const sessionId = this.sessionId;
+    this.authService.me().subscribe({
+      next: (profile) => {
+        if (profile.id !== userId) {
+          this.finishProgressRequest();
+          return;
+        }
+        this.sendProgress(userId, sessionId, pagesRead);
+      },
+      error: () => {
+        this.finishProgressRequest();
+        this.showProgressSyncError();
+      },
+    });
+  }
+
+  get hasPendingProgress(): boolean {
+    if (!this.userId || !this.sessionId) {
+      return false;
+    }
+    return this.readingService.getPendingProgress(this.userId)
+      .some((progress) => progress.sessionId === this.sessionId);
+  }
+
+  private retryPendingProgress(): void {
+    if (!this.userId || !this.sessionId || this.retryingPendingProgress) {
+      return;
+    }
+    const pending = this.readingService.getPendingProgress(this.userId)
+      .find((progress) => progress.sessionId === this.sessionId);
+    if (!pending) {
+      return;
+    }
+    if (pending.pagesRead <= this.savedPages) {
+      this.readingService.confirmProgress(this.userId, this.sessionId, this.savedPages);
+      this.clearProgressSyncError();
+      this.changeDetector.markForCheck();
+      return;
+    }
+    if (pending.pagesRead > this.pages.length) {
+      return;
+    }
+
+    this.retryingPendingProgress = true;
+    const userId = this.userId;
+    const sessionId = this.sessionId;
+    this.progressSyncing = true;
+    this.authService.me().subscribe({
+      next: (profile) => {
+        if (profile.id !== userId) {
+          this.retryingPendingProgress = false;
+          this.progressSyncing = this.pendingProgressUpdates > 0;
+          this.changeDetector.markForCheck();
+          return;
+        }
+        this.sendProgress(userId, sessionId, pending.pagesRead, () => {
+          this.retryingPendingProgress = false;
+          this.progressSyncing = this.pendingProgressUpdates > 0;
+          this.changeDetector.markForCheck();
+        });
+      },
+      error: () => {
+        this.retryingPendingProgress = false;
+        this.progressSyncing = this.pendingProgressUpdates > 0;
+        this.showProgressSyncError();
+      },
+    });
+  }
+
+  private sendProgress(
+    userId: number,
+    sessionId: number,
+    pagesRead: number,
+    onFinished?: () => void,
+  ): void {
+    this.readingService.updateProgress(sessionId, {
       pagesRead,
       excerptHash: this.book?.titulo ?? null,
     }).subscribe({
       next: (session) => {
         this.isCompleted = session.status === 'COMPLETED';
-        this.savedPages = session.pagesRead;
-        this.pendingProgressUpdates = Math.max(0, this.pendingProgressUpdates - 1);
-        this.progressSyncing = this.pendingProgressUpdates > 0;
+        this.savedPages = Math.max(this.savedPages, session.pagesRead);
+        this.readingService.confirmProgress(userId, sessionId, session.pagesRead);
+        this.clearProgressSyncError();
+        this.finishProgressRequest();
+        onFinished?.();
         this.changeDetector.markForCheck();
       },
       error: () => {
-        this.pendingProgressUpdates = Math.max(0, this.pendingProgressUpdates - 1);
-        this.progressSyncing = this.pendingProgressUpdates > 0;
-        this.readerError = 'Não foi possível sincronizar o progresso desta página.';
-        this.changeDetector.markForCheck();
+        this.finishProgressRequest();
+        onFinished?.();
+        this.showProgressSyncError();
       },
     });
+  }
+
+  private finishProgressRequest(): void {
+    this.pendingProgressUpdates = Math.max(0, this.pendingProgressUpdates - 1);
+    this.progressSyncing = this.pendingProgressUpdates > 0 || this.retryingPendingProgress;
+  }
+
+  private showProgressSyncError(): void {
+    this.readerError = 'Não foi possível sincronizar o progresso desta página.';
+    this.changeDetector.markForCheck();
+  }
+
+  private clearProgressSyncError(): void {
+    if (this.readerError === 'Não foi possível sincronizar o progresso desta página.') {
+      this.readerError = '';
+    }
   }
 }

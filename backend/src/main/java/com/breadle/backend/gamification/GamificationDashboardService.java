@@ -1,6 +1,7 @@
 package com.breadle.backend.gamification;
 
 import com.breadle.backend.entity.Leitura;
+import com.breadle.backend.entity.TipoUsuario;
 import com.breadle.backend.entity.Usuario;
 import com.breadle.backend.reading.ReadingProgressEvent;
 import com.breadle.backend.reading.ReadingProgressEventRepository;
@@ -58,7 +59,7 @@ public class GamificationDashboardService {
 
         List<MissionProgress> missions = buildMissionSet((int) booksRead, totalPoints, readingStreakDays, weeklyPages);
 
-        List<RankingEntryDto> ranking = usuarioRepository.findAll().stream()
+        List<RankingEntryDto> ranking = usuarioRepository.findAllByTipoIn(List.of(TipoUsuario.LEITOR)).stream()
             .sorted(Comparator.comparing(Usuario::getPontosTotais, Comparator.nullsLast(Integer::compareTo)).reversed())
             .limit(10)
             .map((user) -> new RankingEntryDto(

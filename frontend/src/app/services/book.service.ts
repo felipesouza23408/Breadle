@@ -1,6 +1,7 @@
 ﻿import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map, timeout } from 'rxjs';
+import { apiUrl } from './api-url';
 
 export interface Book {
   id: number;
@@ -27,7 +28,7 @@ export class BookService {
 
   getBooks(query = ''): Observable<Book[]> {
     const normalizedQuery = query.trim().toLowerCase();
-    return this.http.get<Book[]>('http://localhost:8080/api/books', {
+    return this.http.get<Book[]>(apiUrl('/api/books'), {
       headers: this.getAuthHeaders(),
     }).pipe(
       timeout(4000),
@@ -40,7 +41,7 @@ export class BookService {
 
   getBook(id: number): Observable<Book> {
     return this.http
-      .get<Book>(`http://localhost:8080/api/books/${id}`, {
+      .get<Book>(apiUrl(`/api/books/${id}`), {
         headers: this.getAuthHeaders(),
       })
       .pipe(
@@ -51,7 +52,7 @@ export class BookService {
 
   getBookPages(id: number): Observable<BookPage[]> {
     return this.http
-      .get<BookPage[]>(`http://localhost:8080/api/books/${id}/pages`, {
+      .get<BookPage[]>(apiUrl(`/api/books/${id}/pages`), {
         headers: this.getAuthHeaders(),
       })
       .pipe(

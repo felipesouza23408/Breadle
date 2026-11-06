@@ -11,6 +11,7 @@ import com.breadle.backend.entity.Usuario;
 import com.breadle.backend.repository.UsuarioRepository;
 import com.breadle.backend.service.AuthService;
 import com.breadle.backend.service.EmailDeliveryException;
+import com.breadle.backend.service.GuardianConsentService;
 import com.breadle.backend.service.PasswordResetService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -31,11 +32,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final GuardianConsentService guardianConsentService;
     private final UsuarioRepository usuarioRepository;
 
-    public AuthController(AuthService authService, PasswordResetService passwordResetService, UsuarioRepository usuarioRepository) {
+    public AuthController(AuthService authService, PasswordResetService passwordResetService,
+                          GuardianConsentService guardianConsentService, UsuarioRepository usuarioRepository) {
         this.authService = authService;
         this.passwordResetService = passwordResetService;
+        this.guardianConsentService = guardianConsentService;
         this.usuarioRepository = usuarioRepository;
     }
 
@@ -45,9 +49,33 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterRequest request) {
-        authService.register(request);
-        return ResponseEntity.ok(Map.of("message", "Conta criada com sucesso."));
+    public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
+        AuthService.RegistrationResult result = authService.register(request);
+        return ResponseEntity.ok(Map.of(
+            "message", result.consentPending()
+                ? "Enviamos um link de confirmação para o responsável. A conta poderá ser usada após a confirmação."
+                : "Conta criada com sucesso.",
+            "consentPending", result.consentPending()
+        ));
+    }
+
+    @PostMapping("/consent/confirm")
+    public ResponseEntity<Map<String, String>> confirmGuardianConsent(@RequestBody Map<String, String> request) {
+        guardianConsentService.confirm(request.get("token"));
+        return ResponseEntity.ok(Map.of("message", "Confirmação concluída. A conta já pode ser acessada."));
+    }
+
+    @PostMapping("/consent/resend")
+    public ResponseEntity<Map<String, String>> resendGuardianConsent(@RequestBody Map<String, String> request) {
+        try {
+            guardianConsentService.resend(request.get("email"));
+        } catch (EmailDeliveryException exception) {
+            // A resposta pública permanece igual para endereços conhecidos e desconhecidos.
+        }
+        return ResponseEntity.accepted().body(Map.of(
+            "message",
+            "Se houver uma conta aguardando confirmação para este e-mail, enviaremos um novo link. Verifique também sua pasta de spam."
+        ));
     }
 
     @PostMapping("/password/forgot")
