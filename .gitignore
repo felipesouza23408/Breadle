@@ -1,4 +1,6 @@
 .env
+/backups/
+/backup.sql
 
 backend/java.args
 backend/javac.args

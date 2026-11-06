@@ -32,6 +32,41 @@ Breadle é uma plataforma de leitura gamificada e educativa criada para aumentar
    ```
 4. Abra `http://localhost:4200`.
 
+## Transportar o projeto para outro computador (Windows)
+
+O Git leva o código, mas não o banco do Docker, os arquivos locais de livros nem o `.env`. Para levar também os dados:
+
+1. No computador atual, com o Docker Desktop aberto e o PostgreSQL do Breadle em execução, crie um pacote:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\scripts\backup-windows.ps1
+   ```
+   O arquivo ZIP aparecerá em `backups`. Copie-o para um local seguro, como um disco externo. Ele contém o banco e `backend\storage`, mas não contém segredos. O ZIP não é criptografado e pode conter dados pessoais: proteja-o e apague cópias quando não precisar mais delas.
+2. No novo computador, instale Git, Docker Desktop, Java 21 e Node.js compativel com o projeto; inicie o Docker Desktop.
+3. Clone esta branch e prepare o projeto:
+   ```powershell
+   git clone --branch feature/melhorias-gerais https://github.com/felipesouza23408/Breadle.git
+   cd Breadle
+   powershell -ExecutionPolicy Bypass -File .\scripts\prepare-windows.ps1
+   ```
+   O preparo cria `.env` com segredos locais se ele ainda não existir, instala as dependências do frontend e inicia PostgreSQL e Mailpit.
+4. Copie o ZIP para a pasta `backups` do projeto (ou informe o caminho completo) e restaure:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\scripts\restore-windows.ps1 -BackupPath .\backups\breadle-backup-AAAAmmdd-HHmmss.zip
+   ```
+   A restauração pede confirmação antes de substituir os dados atuais do banco e sobrescrever arquivos homônimos de `backend\storage`.
+5. Inicie o backend e o frontend em terminais separados:
+   ```powershell
+   cd backend
+   .\mvnw.cmd spring-boot:run
+   ```
+   ```powershell
+   cd frontend
+   npm start
+   ```
+   Acesse `http://localhost:4200`. Para parar os servicos, encerre os terminais e execute `docker compose down` na pasta do projeto; os dados do banco permanecem no volume Docker.
+
+Se precisar manter as mesmas configurações de IA ou SMTP, transfira o `.env` separadamente por um meio seguro. Nunca coloque esse arquivo no ZIP ou no Git. Um `.env` novo gera outra chave JWT: contas e dados restaurados continuam no banco, mas tokens de login antigos deixam de valer e será necessário entrar novamente. O backup não inclui arquivos EPUB que estejam fora de `backend\storage`.
+
 Para produção, configure `apiBaseUrl` em `frontend/src/environments/environment.production.ts` com a origem do backend (por exemplo, `https://api.seudominio.com`, sem `/api`) antes de executar `npm run build` em `frontend`; deixe vazio se frontend e API forem servidos na mesma origem. A URL WebSocket é derivada automaticamente (`https` → `wss`). A execução local no Windows continua usando o comando acima.
 
 ## Contas
