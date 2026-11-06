@@ -8,6 +8,7 @@ export const routes: Routes = [
   { path: 'login', loadComponent: () => import('./pages/login/login.component').then((module) => module.LoginComponent), canActivate: [guestGuard] },
   { path: 'forgot-password', loadComponent: () => import('./pages/forgot-password/forgot-password.component').then((module) => module.ForgotPasswordComponent), canActivate: [guestGuard] },
   { path: 'reset-password', loadComponent: () => import('./pages/reset-password/reset-password.component').then((module) => module.ResetPasswordComponent) },
+  { path: 'confirm-email', loadComponent: () => import('./pages/confirm-email/confirm-email.component').then((module) => module.ConfirmEmailComponent) },
   { path: 'register', loadComponent: () => import('./pages/register/register.component').then((module) => module.RegisterComponent), canActivate: [guestGuard] },
   { path: 'dashboard', loadComponent: () => import('./pages/dashboard/dashboard.component').then((module) => module.DashboardComponent), canActivate: [authGuard] },
   { path: 'profile', loadComponent: () => import('./pages/profile/profile.component').then((module) => module.ProfileComponent), canActivate: [authGuard] },

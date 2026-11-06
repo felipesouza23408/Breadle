@@ -2,10 +2,11 @@
 -- BREADLE - Banco de Dados (PostgreSQL 14+)
 -- Baseado em: Requisitos (RF01-RF59, RNF01-RNF30), Diagrama de Classes,
 -- Modelo de Negócios, Mapas de Empatia e Narrativa/Casos de Uso.
+-- Referência de projeto para banco descartável vazio; não execute em banco com dados.
+-- A aplicação usa migrations Flyway para inicializar e atualizar o banco.
 -- =====================================================================
 
-DROP SCHEMA IF EXISTS breadle CASCADE;
-CREATE SCHEMA breadle;
+CREATE SCHEMA IF NOT EXISTS breadle;
 SET search_path TO breadle;
 
 -- ---------------------------------------------------------------------
@@ -71,7 +72,7 @@ CREATE TABLE aluno (
     vinculada_em        TIMESTAMPTZ,
     CONSTRAINT ck_vinculo_diferente CHECK (conta_pessoal_id IS NULL OR conta_pessoal_id <> usuario_id),
     -- menor de idade só fica ativo com consentimento (RNF25)
-    CONSTRAINT ck_menor_consentimento CHECK (NOT menor_de_idade OR consentimento_ok OR TRUE)
+    CONSTRAINT ck_menor_consentimento CHECK (NOT menor_de_idade OR consentimento_ok)
 );
 
 CREATE TABLE autorizacao_responsavel (

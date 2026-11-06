@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, tap, timeout } from 'rxjs';
+import { apiUrl } from './api-url';
 
 export interface LoginPayload {
   email: string;
@@ -12,6 +13,13 @@ export interface RegisterPayload {
   email: string;
   senha: string;
   tipo: 'LEITOR' | 'PROFESSOR' | 'ADMINISTRADOR';
+  dataNascimento: string;
+  emailResponsavel?: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  consentPending: boolean;
 }
 
 export interface AuthSession {
@@ -47,33 +55,43 @@ export class AuthService {
     };
 
     return this.http
-      .post<AuthSession>('http://localhost:8080/api/auth/login', normalizedPayload)
+      .post<AuthSession>(apiUrl('/api/auth/login'), normalizedPayload)
       .pipe(tap((session) => this.persistSession(session)));
   }
 
-  register(payload: RegisterPayload): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>('http://localhost:8080/api/auth/register', payload);
+  register(payload: RegisterPayload): Observable<RegisterResponse> {
+    return this.http.post<RegisterResponse>(apiUrl('/api/auth/register'), payload);
+  }
+
+  confirmGuardianConsent(token: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(apiUrl('/api/auth/consent/confirm'), { token });
+  }
+
+  resendGuardianConsent(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(apiUrl('/api/auth/consent/resend'), {
+      email: email.trim().toLowerCase(),
+    });
   }
 
   requestPasswordReset(email: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>('http://localhost:8080/api/auth/password/forgot', {
+    return this.http.post<{ message: string }>(apiUrl('/api/auth/password/forgot'), {
       email: email.trim().toLowerCase(),
     });
   }
 
   resetPassword(token: string, senha: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>('http://localhost:8080/api/auth/password/reset', { token, senha });
+    return this.http.post<{ message: string }>(apiUrl('/api/auth/password/reset'), { token, senha });
   }
 
   updateProfile(payload: Partial<UserProfile>): Observable<UserProfile> {
-    return this.http.put<UserProfile>('http://localhost:8080/api/auth/me', payload, {
+    return this.http.put<UserProfile>(apiUrl('/api/auth/me'), payload, {
       headers: this.getAuthHeaders(),
     });
   }
 
   me(): Observable<UserProfile> {
     return this.http
-      .get<UserProfile>('http://localhost:8080/api/auth/me', {
+      .get<UserProfile>(apiUrl('/api/auth/me'), {
         headers: this.getAuthHeaders(),
       })
       .pipe(timeout(4000));

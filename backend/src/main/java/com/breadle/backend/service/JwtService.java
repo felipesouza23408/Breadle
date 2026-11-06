@@ -16,11 +16,18 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
-    private String secret;
+    private static final String SECRET_CONFIGURATION_GUIDANCE =
+        "jwt.secret deve usar um segredo aleatório de pelo menos 256 bits (32 bytes). Configure JWT_SECRET.";
 
-    @Value("${jwt.expiration-ms}")
-    private long expirationMs;
+    private final String secret;
+    private final long expirationMs;
+
+    public JwtService(@Value("${jwt.secret}") String secret,
+                      @Value("${jwt.expiration-ms}") long expirationMs) {
+        this.secret = secret;
+        this.expirationMs = expirationMs;
+        validateSecret();
+    }
 
     public String generateToken(UserDetails userDetails) {
         Instant now = Instant.now();
@@ -59,10 +66,16 @@ public class JwtService {
     }
 
     private SecretKey getSigningKey() {
-        String normalizedSecret = secret;
-        if (normalizedSecret.length() < 32) {
-            normalizedSecret = normalizedSecret + "0".repeat(32 - normalizedSecret.length());
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(SECRET_CONFIGURATION_GUIDANCE);
         }
-        return Keys.hmacShaKeyFor(normalizedSecret.getBytes(StandardCharsets.UTF_8));
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private void validateSecret() {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(SECRET_CONFIGURATION_GUIDANCE);
+        }
     }
 }

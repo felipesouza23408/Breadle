@@ -1,6 +1,10 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, map, timeout } from 'rxjs';
+import { apiUrl } from './api-url';
+
+export type AssessmentQuestionType = 'MULTIPLE_CHOICE' | 'SHORT_ANSWER' | 'INFERENCE_EVIDENCE';
+export type AssessmentDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
 export interface AiUsageResponse {
   usedToday: number;
@@ -13,13 +17,35 @@ export interface AiResultResponse extends AiUsageResponse {
   result: string;
 }
 
+export interface AssessmentQuestion {
+  id: number;
+  order: number;
+  type: AssessmentQuestionType;
+  difficulty: AssessmentDifficulty;
+  prompt: string;
+  options: string[];
+}
+
+export interface ReadingAssessment {
+  id: number;
+  pages: number[];
+  createdAt: string;
+  questions: AssessmentQuestion[];
+}
+
+export interface AssessmentAnswer {
+  questionId: number;
+  correct: boolean;
+  feedback: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AiService {
   constructor(private http: HttpClient) {}
 
   getUsage(): Observable<AiUsageResponse> {
     return this.http
-      .get<unknown>('http://localhost:8080/api/ai/usage', {
+      .get<unknown>(apiUrl('/api/ai/usage'), {
         headers: this.getAuthHeaders(),
       })
       .pipe(timeout(8000), map((response) => this.requireUsageResponse(response)));
@@ -51,7 +77,7 @@ export class AiService {
 
   private post(endpoint: string, payload: object): Observable<AiResultResponse> {
     return this.http
-      .post<unknown>(`http://localhost:8080/api/ai/${endpoint}`, payload, {
+      .post<unknown>(apiUrl(`/api/ai/${endpoint}`), payload, {
         headers: this.getAuthHeaders(),
       })
       .pipe(timeout(12_000), map((response) => this.requireResultResponse(response)));

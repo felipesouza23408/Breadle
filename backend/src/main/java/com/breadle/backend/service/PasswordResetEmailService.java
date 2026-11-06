@@ -55,4 +55,34 @@ public class PasswordResetEmailService {
             throw new EmailDeliveryException("Não foi possível enviar o e-mail de redefinição.", exception);
         }
     }
+
+    public void sendGuardianConsentLink(Usuario usuario, String token) {
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null) {
+            throw new EmailDeliveryException("O envio de e-mail não está configurado.");
+        }
+
+        String link = frontendBaseUrl + "/confirm-email?token=" + token;
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(usuario.getEmailResponsavel());
+        message.setSubject("Confirme a conta do Breadle");
+        message.setText("""
+            Olá!
+
+            Foi solicitada a criação de uma conta no Breadle para %s.
+            Para autorizar o acesso, confirme pelo link abaixo. Ele expira em 24 horas e só pode ser usado uma vez:
+
+            %s
+
+            Se você não reconhece esta solicitação, ignore esta mensagem.
+            """.formatted(usuario.getNome(), link));
+
+        try {
+            mailSender.send(message);
+        } catch (MailException exception) {
+            log.error("Não foi possível enviar o e-mail de consentimento do responsável.");
+            throw new EmailDeliveryException("Não foi possível enviar o e-mail de consentimento.", exception);
+        }
+    }
 }

@@ -2,6 +2,7 @@ package com.breadle.backend.common;
 
 import jakarta.servlet.http.HttpServletRequest;
 import com.breadle.backend.ai.AiQuotaExceededException;
+import com.breadle.backend.ai.AiProviderException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,17 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest request) {
+        ApiError error = new ApiError(
+            HttpStatus.CONFLICT.value(),
+            HttpStatus.CONFLICT.getReasonPhrase(),
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
     @ExceptionHandler(AiQuotaExceededException.class)
     public ResponseEntity<ApiError> handleAiQuota(AiQuotaExceededException ex, HttpServletRequest request) {
         ApiError error = new ApiError(
@@ -27,6 +39,17 @@ public class GlobalExceptionHandler {
             request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+    }
+
+    @ExceptionHandler(AiProviderException.class)
+    public ResponseEntity<ApiError> handleAiProvider(AiProviderException ex, HttpServletRequest request) {
+        ApiError error = new ApiError(
+            HttpStatus.BAD_GATEWAY.value(),
+            HttpStatus.BAD_GATEWAY.getReasonPhrase(),
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

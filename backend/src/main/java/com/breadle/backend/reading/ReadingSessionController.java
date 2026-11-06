@@ -1,5 +1,6 @@
 package com.breadle.backend.reading;
 
+import com.breadle.backend.service.content.BookPage;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,6 +38,13 @@ public class ReadingSessionController {
         return ResponseEntity.ok(readingSessionService.registerProgress(sessionId, request));
     }
 
+    @PostMapping("/sessions/{sessionId}/pages/{pageNumber}")
+    public ResponseEntity<BookPage> openPage(
+            @PathVariable Long sessionId,
+            @PathVariable Integer pageNumber) {
+        return ResponseEntity.ok(readingSessionService.openPage(sessionId, pageNumber));
+    }
+
     @PostMapping("/sessions/{sessionId}/complete")
     public ResponseEntity<ReadingSession> completeSession(@PathVariable Long sessionId) {
         return ResponseEntity.ok(readingSessionService.completeSession(sessionId));
@@ -46,5 +54,18 @@ public class ReadingSessionController {
     public ResponseEntity<String> generateQuestions(@PathVariable Long sessionId,
                                                    @Valid @RequestBody ReadingAiQuestionRequest request) {
         return ResponseEntity.ok(readingSessionService.generateQuestionsForExcerpt(sessionId, request));
+    }
+
+    @PostMapping("/sessions/{sessionId}/assessments")
+    public ResponseEntity<ReadingAssessmentDto> createAssessment(@PathVariable Long sessionId) {
+        return ResponseEntity.ok(readingSessionService.createAssessment(sessionId));
+    }
+
+    @PostMapping("/sessions/{sessionId}/assessments/{questionId}/answers")
+    public ResponseEntity<AssessmentAnswerDto> submitAssessmentAnswer(
+            @PathVariable Long sessionId,
+            @PathVariable Long questionId,
+            @RequestBody AssessmentAnswerRequest request) {
+        return ResponseEntity.ok(readingSessionService.submitAssessmentAnswer(sessionId, questionId, request));
     }
 }

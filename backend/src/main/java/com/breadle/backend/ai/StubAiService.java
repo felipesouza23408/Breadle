@@ -2,13 +2,18 @@ package com.breadle.backend.ai;
 
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class StubAiService implements AiService {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String LOCAL_MODE_NOTICE =
             "Modo local: sem um provedor de IA configurado, esta ajuda é um roteiro de leitura e não uma interpretação automática.";
 
@@ -26,6 +31,90 @@ public class StubAiService implements AiService {
                 "2. Que sentimento ou intenção você percebe nessa cena? Qual palavra ou ação sustenta sua leitura?\n" +
                 "3. Que dúvida sobre a passagem você gostaria de investigar ao continuar a leitura?\n\n" +
                 "As perguntas são orientadoras e não substituem uma avaliação gerada por IA.";
+    }
+
+    @Override
+    public String generateStructuredAssessment(String bookTitle, String registeredPageContext) {
+            String context = normalize(registeredPageContext);
+            if (context.isBlank()) {
+                throw new IllegalArgumentException("Não há páginas registradas para gerar a avaliação.");
+            }
+            String evidence = truncate(firstSentence(context.replaceAll("(?m)^\\[Página \\d+\\]\\s*", "")), 220);
+            if (evidence.isBlank()) {
+                evidence = truncate(context, 220);
+            }
+            int correctOption = Math.floorMod(context.hashCode(), 4);
+            List<String> options = new java.util.ArrayList<>(List.of(
+                    "Uma informação que não aparece na página",
+                    "Outro detalhe ausente do trecho",
+                    "Uma situação diferente da descrita"));
+            options.add(correctOption, evidence);
+            List<Map<String, Object>> questions = List.of(
+                    question("MULTIPLE_CHOICE", "EASY",
+                            "Qual informação aparece explicitamente no trecho lido?",
+                            options, correctOption, evidence,
+                            "Selecione a alternativa que reproduz um detalhe explícito do contexto.", evidence),
+                    question("SHORT_ANSWER", "MEDIUM",
+                            "Que detalhe concreto do trecho ajuda a entender o que está acontecendo?",
+                            List.of(), null, evidence,
+                            "A resposta identifica ao menos um detalhe presente na evidência textual.", evidence),
+                    question("INFERENCE_EVIDENCE", "HARD",
+                            "Que interpretação possível você faz sobre a passagem? Apoie-a em uma evidência do texto.",
+                            List.of(), null,
+                            "A interpretação deve ser uma hipótese apoiada por um detalhe explícito do trecho.",
+                            "A resposta apresenta uma interpretação como hipótese e a relaciona a uma evidência do contexto.",
+                            evidence)
+            );
+            return toJson(Map.of("questions", questions));
+    }
+
+    @Override
+    public String evaluateStructuredAnswer(String question, String registeredPageContext, String expectedAnswer,
+                                           String rubric, String userAnswer) {
+        String evidence = truncate(firstSentence(normalize(registeredPageContext)
+                .replaceAll("(?m)^\\[Página \\d+\\]\\s*", "")), 220);
+        String answer = normalize(userAnswer).toLowerCase();
+        String expected = normalize(expectedAnswer).toLowerCase();
+        boolean correct;
+        if (normalize(question).contains("interpretação") || normalize(question).contains("inferência")) {
+            boolean signalsInference = List.of("talvez", "pode", "parece", "sugere", "penso", "acredito")
+                    .stream().anyMatch(answer::contains);
+            correct = !answer.isBlank() && signalsInference && containsMeaningfulWord(
+                    answer, normalize(registeredPageContext).replaceAll("(?m)^\\[Página \\d+\\]\\s*", ""));
+        } else {
+            correct = !answer.isBlank() && (!expected.isBlank()
+                    && (answer.contains(expected) || expected.contains(answer))
+                    || containsMeaningfulWord(answer, expected));
+        }
+        return toJson(Map.of("correct", correct, "evidence", evidence));
+    }
+
+    private boolean containsMeaningfulWord(String answer, String expected) {
+        return Arrays.stream(expected.split("[^\\p{L}\\p{N}]+"))
+                .filter(word -> word.length() >= 5)
+                .anyMatch(answer::contains);
+    }
+
+    private Map<String, Object> question(String type, String difficulty, String prompt, List<String> options,
+                                         Integer correctOption, String expectedAnswer, String rubric, String evidence) {
+        Map<String, Object> question = new java.util.LinkedHashMap<>();
+        question.put("type", type);
+        question.put("difficulty", difficulty);
+        question.put("prompt", prompt);
+        question.put("options", options);
+        question.put("correctOption", correctOption);
+        question.put("expectedAnswer", expectedAnswer);
+        question.put("rubric", rubric);
+        question.put("evidence", evidence);
+        return question;
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Não foi possível gerar a avaliação local estruturada.", ex);
+        }
     }
 
     @Override

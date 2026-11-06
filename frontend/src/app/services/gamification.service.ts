@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { apiUrl } from './api-url';
 
 export interface MissionProgress {
   title: string;
@@ -42,7 +43,7 @@ export class GamificationService {
   constructor(private http: HttpClient) {}
 
   getDashboard(): Observable<GamificationDashboard> {
-    return this.http.get<GamificationDashboard>('http://localhost:8080/api/gamification/dashboard', {
+    return this.http.get<GamificationDashboard>(apiUrl('/api/gamification/dashboard'), {
       headers: this.getAuthHeaders(),
     });
   }

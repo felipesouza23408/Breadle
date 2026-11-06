@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -36,7 +37,7 @@ import { AuthService } from '../../services/auth.service';
 
           <a routerLink="/forgot-password" class="forgot-link">Esqueci minha senha</a>
           <button type="submit" [disabled]="loading">{{ loading ? 'Entrando...' : 'Entrar' }}</button>
-          <p class="hint" *ngIf="message">{{ message }}</p>
+          <p class="hint" *ngIf="message" role="status" aria-live="polite">{{ message }}</p>
         </form>
 
         <div class="footer-links">
@@ -54,18 +55,18 @@ import { AuthService } from '../../services/auth.service';
         display: grid;
         place-items: center;
         background:
-          radial-gradient(ellipse at 83% 45%, rgba(60, 76, 255, .42), transparent 38%),
-          linear-gradient(105deg, #030305 0%, #080914 45%, #1716d8 100%);
-        padding: 2.5rem 1rem;
+          radial-gradient(ellipse at 82% 18%, rgba(84, 42, 168, .28), transparent 34rem),
+          radial-gradient(ellipse at 12% 100%, rgba(255, 217, 0, .07), transparent 28rem),
+          #000;
+        padding: 2rem 1rem;
       }
       .login-card {
         width: min(440px, 100%);
-        background: rgba(139, 139, 159, 0.56);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 2rem;
+        background: #1f1f1f;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 1.2rem;
         padding: 2rem clamp(1.25rem, 5vw, 2.5rem);
-        box-shadow: 0 28px 70px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.15);
-        backdrop-filter: blur(22px);
+        box-shadow: 0 24px 70px rgba(0,0,0,.48);
       }
       .header {
         margin-bottom: 1.2rem;
@@ -78,12 +79,7 @@ import { AuthService } from '../../services/auth.service';
         gap: 0.3rem;
         margin-bottom: 1rem;
       }
-      .brand-mark {
-        position: relative;
-        display: block;
-        width: 84px;
-        height: 66px;
-      }
+      .brand-mark { position: relative; display: block; width: 84px; height: 66px; }
       .page {
         position: absolute;
         display: block;
@@ -100,37 +96,39 @@ import { AuthService } from '../../services/auth.service';
       .brand-name {
         font-size: clamp(1.8rem, 7vw, 2.45rem);
         letter-spacing: 0.04em;
-        color: #fff;
+        color: var(--breadle-text);
         font-weight: 700;
       }
-      h1 { margin: 0 0 1.2rem; color: #fff; font-size: clamp(1.8rem, 2vw, 2.3rem); }
+      h1 { margin: 0 0 1.2rem; color: var(--breadle-text); font-size: clamp(1.8rem, 2vw, 2.3rem); }
       form {
         display: grid;
         gap: 1rem;
       }
-      label { display: grid; gap: 0.45rem; font-weight: 600; color: rgba(255,255,255,.92); }
+      label { display: grid; gap: 0.45rem; font-weight: 600; color: var(--breadle-text-secondary); }
       input {
-        padding: 0.9rem 1rem;
-        border-radius: 0.55rem;
-        border: 1px solid rgba(255,255,255,.14);
+        min-height: 2.9rem;
+        padding: 0.75rem 1rem;
+        border-radius: var(--breadle-radius-small);
+        border: 1px solid rgba(255,255,255,.16);
         font-size: 1rem;
-        color: #fff;
-        background: rgba(31, 33, 51, 0.38);
+        color: var(--breadle-text);
+        background: #2a2a2a;
       }
-      input::placeholder { color: rgba(255,255,255,.62); }
-      input:focus { outline: 2px solid rgba(255,255,255,.7); outline-offset: 1px; }
+      input::placeholder { color: var(--breadle-text-muted); }
+      input:focus { outline: 2px solid var(--breadle-gold); outline-offset: 1px; }
       button {
         width: 100%;
-        border: 1px solid rgba(255,255,255,.25);
-        padding: 0.85rem 1rem;
+        min-height: 2.9rem;
+        border: 1px solid transparent;
+        padding: 0.75rem 1rem;
         border-radius: 999px;
-        background: rgba(235, 235, 244, .8);
-        color: #292a36;
+        background: var(--breadle-gold);
+        color: #171406;
         font-weight: 800;
         cursor: pointer;
-        box-shadow: 0 10px 22px rgba(0,0,0,.12);
+        transition: background var(--breadle-motion-fast), transform var(--breadle-motion-fast);
       }
-      button:hover:not(:disabled) { background: #fff; }
+      button:hover:not(:disabled) { background: #ffe84a; transform: translateY(-1px); }
       button:disabled { opacity: .65; cursor: wait; }
       .footer-links {
         display: flex;
@@ -141,7 +139,7 @@ import { AuthService } from '../../services/auth.service';
       }
       .forgot-link {
         justify-self: end;
-        color: #fff;
+        color: var(--breadle-lilac);
         font-size: .9rem;
         font-weight: 700;
         text-decoration: underline;
@@ -149,13 +147,14 @@ import { AuthService } from '../../services/auth.service';
       }
       .back-link,
       .secondary-link {
-        color: #fff;
+        color: var(--breadle-text-secondary);
         text-decoration: none;
         font-weight: 700;
       }
+      .back-link:hover, .secondary-link:hover, .forgot-link:hover { color: var(--breadle-gold); }
       .hint {
         margin: 0;
-        color: #fff;
+        color: var(--breadle-text-secondary);
         font-weight: 700;
         line-height: 1.45;
       }
@@ -193,11 +192,27 @@ export class LoginComponent {
         this.loading = false;
         this.router.navigateByUrl('/dashboard');
       },
-      error: (error) => {
+      error: (error: unknown) => {
         this.loading = false;
-        this.message = error?.error?.message || 'Não foi possível entrar agora. Verifique seu e-mail e senha.';
+        this.message = this.getLoginErrorMessage(error);
         this.changeDetector.markForCheck();
       },
     });
+  }
+
+  private getLoginErrorMessage(error: unknown): string {
+    if (error instanceof HttpErrorResponse) {
+      if (error.status === 0) {
+        return 'Não foi possível conectar ao servidor do Breadle. Confirme se o backend está em execução e tente novamente.';
+      }
+      if (error.status === 401) {
+        return error.error?.message ?? 'E-mail ou senha inválidos.';
+      }
+      if (typeof error.error?.message === 'string') {
+        return error.error.message;
+      }
+    }
+
+    return 'Não foi possível entrar agora. Tente novamente.';
   }
 }

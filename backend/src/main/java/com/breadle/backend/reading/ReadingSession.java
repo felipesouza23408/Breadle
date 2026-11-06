@@ -50,6 +50,9 @@ public class ReadingSession {
     @Column(name = "already_awarded", nullable = false)
     private Boolean alreadyAwarded = false;
 
+    @Column(name = "page_tracking_started", nullable = false)
+    private Boolean pageTrackingStarted = false;
+
     public Long getId() {
         return id;
     }
@@ -144,5 +147,13 @@ public class ReadingSession {
 
     public void setAlreadyAwarded(Boolean alreadyAwarded) {
         this.alreadyAwarded = alreadyAwarded;
+    }
+
+    public Boolean getPageTrackingStarted() {
+        return pageTrackingStarted;
+    }
+
+    public void setPageTrackingStarted(Boolean pageTrackingStarted) {
+        this.pageTrackingStarted = pageTrackingStarted;
     }
 }

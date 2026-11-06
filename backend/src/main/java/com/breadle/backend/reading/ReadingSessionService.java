@@ -2,6 +2,7 @@ package com.breadle.backend.reading;
 
 import com.breadle.backend.ai.AiService;
 import com.breadle.backend.ai.AiUsageService;
+import com.breadle.backend.common.ConflictException;
 import com.breadle.backend.entity.Leitura;
 import com.breadle.backend.entity.Livro;
 import com.breadle.backend.entity.Usuario;
@@ -10,8 +11,11 @@ import com.breadle.backend.notification.NotificationService;
 import com.breadle.backend.repository.LeituraRepository;
 import com.breadle.backend.repository.LivroRepository;
 import com.breadle.backend.repository.UsuarioRepository;
+import com.breadle.backend.service.content.BookPage;
+import com.breadle.backend.service.content.BookPageContentService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -28,6 +32,7 @@ public class ReadingSessionService {
     private static final String REWARD_TYPE_COMPLETION = "READING_COMPLETION";
 
     private final ReadingSessionRepository readingSessionRepository;
+    private final ReadingSessionPageRepository readingSessionPageRepository;
     private final ReadingProgressEventRepository readingProgressEventRepository;
     private final ReadingRewardLedgerRepository readingRewardLedgerRepository;
     private final UsuarioRepository usuarioRepository;
@@ -37,8 +42,27 @@ public class ReadingSessionService {
     private final AiService aiService;
     private final AiUsageService aiUsageService;
     private final NotificationService notificationService;
+    private final BookPageContentService bookPageContentService;
+    private ReadingAssessmentService assessmentService;
+
+    @Autowired
+    public void setAssessmentService(ReadingAssessmentService assessmentService) {
+        this.assessmentService = assessmentService;
+    }
+
+    public ReadingAssessmentDto createAssessment(Long sessionId) {
+        return assessmentService.createOrGet(sessionId);
+    }
+
+    public AssessmentAnswerDto submitAssessmentAnswer(
+            Long sessionId,
+            Long questionId,
+            AssessmentAnswerRequest request) {
+        return assessmentService.submitAnswer(sessionId, questionId, request);
+    }
 
     public ReadingSessionService(ReadingSessionRepository readingSessionRepository,
+                                ReadingSessionPageRepository readingSessionPageRepository,
                                 ReadingProgressEventRepository readingProgressEventRepository,
                                 ReadingRewardLedgerRepository readingRewardLedgerRepository,
                                 UsuarioRepository usuarioRepository,
@@ -47,8 +71,10 @@ public class ReadingSessionService {
                                 GamificationService gamificationService,
                                 AiService aiService,
                                 AiUsageService aiUsageService,
-                                NotificationService notificationService) {
+                                NotificationService notificationService,
+                                BookPageContentService bookPageContentService) {
         this.readingSessionRepository = readingSessionRepository;
+        this.readingSessionPageRepository = readingSessionPageRepository;
         this.readingProgressEventRepository = readingProgressEventRepository;
         this.readingRewardLedgerRepository = readingRewardLedgerRepository;
         this.usuarioRepository = usuarioRepository;
@@ -58,6 +84,7 @@ public class ReadingSessionService {
         this.aiService = aiService;
         this.aiUsageService = aiUsageService;
         this.notificationService = notificationService;
+        this.bookPageContentService = bookPageContentService;
     }
 
     @Transactional(readOnly = true)
@@ -105,8 +132,9 @@ public class ReadingSessionService {
         Livro livro = livroRepository.findById(request.getBookId())
                 .orElseThrow(() -> new EntityNotFoundException("Livro não encontrado."));
 
-        if (request.getPagesDefined() == null || request.getPagesDefined() < 1) {
-            throw new IllegalArgumentException("A sessão precisa declarar pelo menos uma página lida antes do início.");
+        if (request.getPagesDefined() == null || request.getPagesDefined() < 1
+                || livro.getTotalPaginas() == null || request.getPagesDefined() > livro.getTotalPaginas()) {
+            throw new IllegalArgumentException("A quantidade de páginas da sessão deve estar entre 1 e o total real do livro.");
         }
 
         ReadingSession session = new ReadingSession();
@@ -116,12 +144,68 @@ public class ReadingSessionService {
         session.setPagesRead(0);
         session.setStatus("ACTIVE");
         session.setAlreadyAwarded(false);
+        session.setPageTrackingStarted(true);
         return readingSessionRepository.save(session);
     }
 
     @Transactional
+    public BookPage openPage(Long sessionId, Integer pageNumber) {
+        ReadingSession session = readingSessionRepository.findByIdForUpdate(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Sessão de leitura não encontrada."));
+        ensureSessionOwner(session);
+
+        if (!"ACTIVE".equals(session.getStatus()) && !"COMPLETED".equals(session.getStatus())) {
+            throw new ConflictException("Esta sessão de leitura não está disponível para navegação.");
+        }
+        if (pageNumber == null || pageNumber < 1 || session.getPagesDefined() == null
+                || pageNumber > session.getPagesDefined()) {
+            throw new IllegalArgumentException("A página solicitada está fora do intervalo da sessão.");
+        }
+
+        Livro livro = livroRepository.findById(session.getBookId())
+                .filter(book -> Boolean.TRUE.equals(book.getAtivo()))
+                .orElseThrow(() -> new EntityNotFoundException("Livro da sessão não encontrado ou inativo."));
+        if (livro.getTotalPaginas() == null || session.getPagesDefined() > livro.getTotalPaginas()) {
+            throw new IllegalArgumentException("A sessão excede o total real de páginas do livro.");
+        }
+
+        BookPage page = bookPageContentService.loadPage(livro, pageNumber);
+        if (readingSessionPageRepository.findBySessionIdAndPageNumber(sessionId, pageNumber).isPresent()) {
+            return page;
+        }
+        if ("COMPLETED".equals(session.getStatus())) {
+            return page;
+        }
+
+        boolean trackingStarted = Boolean.TRUE.equals(session.getPageTrackingStarted());
+        Integer highestTrackedPage = readingSessionPageRepository.findHighestPageNumber(sessionId);
+        int expectedPage;
+        if (trackingStarted) {
+            expectedPage = highestTrackedPage == null ? 1 : highestTrackedPage + 1;
+        } else {
+            int priorProgress = session.getPagesRead() == null ? 0 : session.getPagesRead();
+            if (pageNumber <= priorProgress) {
+                return page;
+            }
+            expectedPage = priorProgress + 1;
+        }
+        if (pageNumber != expectedPage) {
+            throw new ConflictException("Abra as páginas em sequência antes de continuar.");
+        }
+
+        ReadingSessionPage openedPage = new ReadingSessionPage();
+        openedPage.setSessionId(sessionId);
+        openedPage.setPageNumber(pageNumber);
+        openedPage.setOpenedAt(java.time.Instant.now());
+        readingSessionPageRepository.save(openedPage);
+        session.setPageTrackingStarted(true);
+        readingSessionRepository.save(session);
+        return page;
+    }
+
+    @Transactional
     public ReadingSession registerProgress(Long sessionId, ReadingProgressRequest request) {
-        ReadingSession session = readingSessionRepository.findById(sessionId)
+        ReadingSession session = readingSessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Sessão de leitura não encontrada."));
         ensureSessionOwner(session);
 
@@ -129,8 +213,15 @@ public class ReadingSessionService {
             throw new IllegalArgumentException("A quantidade de páginas lidas é inválida.");
         }
 
-        if (request.getPagesRead() > session.getPagesDefined()) {
+        if (session.getPagesDefined() == null || session.getPagesDefined() < 1
+                || request.getPagesRead() > session.getPagesDefined()) {
             throw new IllegalArgumentException("A leitura não pode exceder o número de páginas definido para a sessão.");
+        }
+
+        Livro livro = livroRepository.findById(session.getBookId())
+                .orElseThrow(() -> new EntityNotFoundException("Livro da sessão não encontrado."));
+        if (livro.getTotalPaginas() == null || session.getPagesDefined() > livro.getTotalPaginas()) {
+            throw new IllegalArgumentException("A sessão excede o total real de páginas do livro.");
         }
 
         if (Boolean.TRUE.equals(session.getAlreadyAwarded()) && "COMPLETED".equals(session.getStatus())) {
@@ -163,7 +254,7 @@ public class ReadingSessionService {
 
     @Transactional
     public ReadingSession completeSession(Long sessionId) {
-        ReadingSession session = readingSessionRepository.findById(sessionId)
+        ReadingSession session = readingSessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Sessão de leitura não encontrada."));
         ensureSessionOwner(session);
         return completeSession(session);
@@ -209,16 +300,33 @@ public class ReadingSessionService {
     }
 
     private ReadingSession completeSession(ReadingSession session) {
-        if ("COMPLETED".equals(session.getStatus()) && Boolean.TRUE.equals(session.getAlreadyAwarded())) {
-            return session;
-        }
-        if (session.getPagesDefined() == null || session.getPagesRead() == null
+        if (session.getPagesDefined() == null || session.getPagesDefined() < 1 || session.getPagesRead() == null
             || session.getPagesRead() < session.getPagesDefined()) {
             throw new IllegalArgumentException("Conclua todas as páginas da sessão antes de finalizar a leitura.");
         }
 
         Livro livro = livroRepository.findById(session.getBookId())
                 .orElseThrow(() -> new EntityNotFoundException("Livro da sessão não encontrado."));
+        if (livro.getTotalPaginas() == null || session.getPagesDefined() > livro.getTotalPaginas()
+                || session.getPagesRead() > livro.getTotalPaginas()) {
+            throw new IllegalArgumentException("A sessão excede o total real de páginas do livro.");
+        }
+        if ("COMPLETED".equals(session.getStatus()) && Boolean.TRUE.equals(session.getAlreadyAwarded())) {
+            return session;
+        }
+
+        var existingReward = readingRewardLedgerRepository
+                .findFirstBySessionIdAndRewardType(session.getId(), REWARD_TYPE_COMPLETION);
+        if (existingReward.isPresent()) {
+            session.setPointsAwarded(existingReward.get().getPointsAwarded());
+            session.setAlreadyAwarded(true);
+            session.setStatus("COMPLETED");
+            if (session.getFinishedAt() == null) {
+                session.setFinishedAt(java.time.Instant.now());
+            }
+            session.setLastProgressAt(session.getFinishedAt());
+            return readingSessionRepository.save(session);
+        }
 
         int basePoints = livro.getPontuacaoBase() == null ? 10 : livro.getPontuacaoBase();
         int awardedPoints = gamificationService.calculateReadingPoints(
@@ -226,16 +334,13 @@ public class ReadingSessionService {
                 basePoints,
                 true
         );
-
-        if (!readingRewardLedgerRepository.findFirstBySessionIdAndRewardType(session.getId(), REWARD_TYPE_COMPLETION).isPresent()) {
-            ReadingRewardLedger ledger = new ReadingRewardLedger();
-            ledger.setUserId(session.getUserId());
-            ledger.setSessionId(session.getId());
-            ledger.setRewardType(REWARD_TYPE_COMPLETION);
-            ledger.setPointsAwarded(awardedPoints);
-            ledger.setReferenceHash(session.getExcerptHash() == null ? "reading-session-" + session.getId() : session.getExcerptHash());
-            readingRewardLedgerRepository.save(ledger);
-        }
+        ReadingRewardLedger ledger = new ReadingRewardLedger();
+        ledger.setUserId(session.getUserId());
+        ledger.setSessionId(session.getId());
+        ledger.setRewardType(REWARD_TYPE_COMPLETION);
+        ledger.setPointsAwarded(awardedPoints);
+        ledger.setReferenceHash(session.getExcerptHash() == null ? "reading-session-" + session.getId() : session.getExcerptHash());
+        readingRewardLedgerRepository.save(ledger);
 
         Usuario usuario = usuarioRepository.findById(session.getUserId())
             .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado para pontuação."));

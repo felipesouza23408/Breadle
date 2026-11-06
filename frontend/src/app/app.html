@@ -1,46 +1,123 @@
-﻿<div class="app-shell">
-  <header class="top-nav">
-    <a class="nav-brand" [routerLink]="isAuthenticated() ? '/dashboard' : '/'" aria-label="Breadle home" (click)="closeMobileNav()">
-      <span class="brand-mark" aria-hidden="true">
-        <span class="page page-one"></span>
-        <span class="page page-two"></span>
-        <span class="page page-three"></span>
-      </span>
-      <span>BREADLE</span>
-      <span class="brand-caption">Sua próxima história começa aqui</span>
-    </a>
+<div class="app-shell" [class.auth-layout]="!showShell">
+  <ng-container *ngIf="showShell">
+    <header class="app-header">
+      <button
+        #menuToggle
+        class="menu-toggle"
+        type="button"
+        (click)="sidebarOpen = !sidebarOpen"
+        [attr.aria-expanded]="sidebarOpen"
+        [attr.aria-label]="sidebarOpen ? 'Fechar menu' : 'Abrir menu'"
+        aria-controls="app-sidebar"
+      >
+        <span></span><span></span><span></span>
+      </button>
+
+      <a class="app-brand" [routerLink]="isAuthenticated() ? '/dashboard' : '/'" (click)="closeMenus()" aria-label="Breadle — início">
+        <span class="brand-mark" aria-hidden="true">
+          <span class="page page-one"></span><span class="page page-two"></span><span class="page page-three"></span>
+        </span>
+        <span class="brand-name">BREADLE</span>
+      </a>
+
+      <nav class="header-links" aria-label="Navegação principal">
+        <a
+          *ngFor="let item of primaryLinks; trackBy: trackLink"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+          (click)="closeMenus()"
+        >{{ item.label }}</a>
+      </nav>
+
+      <form class="header-search" role="search" (submit)="submitSearch($event, globalSearch.value)">
+        <label class="visually-hidden" for="global-search">Buscar livros por título ou autor</label>
+        <input #globalSearch id="global-search" type="search" placeholder="Buscar livros" autocomplete="off" />
+        <button type="submit" aria-label="Buscar">⌕</button>
+      </form>
+
+      <a class="header-icon" [routerLink]="isAuthenticated() ? '/notifications' : '/login'" aria-label="Notificações">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path>
+        </svg>
+      </a>
+
+      <div class="account-menu">
+        <button
+          class="account-toggle"
+          type="button"
+          (click)="accountMenuOpen = !accountMenuOpen"
+          [attr.aria-expanded]="accountMenuOpen"
+          aria-label="Abrir menu da conta"
+        >
+          <span class="account-avatar" aria-hidden="true">{{ accountInitials }}</span>
+          <span class="account-name">{{ accountName }}</span>
+          <span class="chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="account-dropdown" *ngIf="accountMenuOpen">
+          <div class="account-summary">
+            <strong>{{ accountName }}</strong>
+            <span>{{ accountTypeLabel }}</span>
+          </div>
+          <a *ngIf="isAuthenticated()" routerLink="/profile" (click)="closeMenus()">Meu perfil</a>
+          <a *ngIf="!isAuthenticated()" routerLink="/login" (click)="closeMenus()">Entrar</a>
+          <button *ngIf="isAuthenticated()" type="button" (click)="logout()">Sair da conta</button>
+        </div>
+      </div>
+    </header>
 
     <button
-      class="mobile-nav-toggle"
+      class="sidebar-backdrop"
+      *ngIf="sidebarOpen"
       type="button"
-      (click)="mobileNavOpen = !mobileNavOpen"
-      [attr.aria-expanded]="mobileNavOpen"
-      aria-controls="primary-navigation"
-      aria-label="Alternar navegação"
-    >
-      <span></span><span></span><span></span>
-    </button>
+      aria-label="Fechar menu"
+      (click)="closeMenus()"
+    ></button>
 
-    <nav id="primary-navigation" class="nav-links" [class.is-open]="mobileNavOpen" aria-label="Navegação principal">
-      <ng-container *ngIf="!isAuthenticated(); else authenticatedNav">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileNav()">Home</a>
-        <a routerLink="/login" routerLinkActive="active" (click)="closeMobileNav()">Perfil</a>
-        <a routerLink="/books" routerLinkActive="active" (click)="closeMobileNav()">Acervo</a>
-      </ng-container>
+    <aside id="app-sidebar" class="app-sidebar" [class.open]="sidebarOpen" aria-label="Menu de navegação">
+      <div class="sidebar-heading">
+        <span>NAVEGAÇÃO</span>
+        <button type="button" aria-label="Fechar menu" (click)="closeMenus()">×</button>
+      </div>
+      <a
+        *ngFor="let item of navigationLinks; trackBy: trackLink"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+        (click)="closeMenus()"
+      >
+        <span class="nav-glyph" aria-hidden="true">{{ item.glyph }}</span>
+        <span>{{ item.label }}</span>
+      </a>
+      <div class="sidebar-divider"></div>
+      <a *ngIf="isAuthenticated()" routerLink="/profile" routerLinkActive="active" (click)="closeMenus()">
+        <span class="nav-glyph" aria-hidden="true">◉</span><span>Perfil e configurações</span>
+      </a>
+    </aside>
+  </ng-container>
 
-      <ng-template #authenticatedNav>
-        <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileNav()">Visão geral</a>
-        <a routerLink="/books" routerLinkActive="active" (click)="closeMobileNav()">Acervo</a>
-        <a routerLink="/library" routerLinkActive="active" (click)="closeMobileNav()">Minha biblioteca</a>
-        <a routerLink="/missions" routerLinkActive="active" (click)="closeMobileNav()">Missões</a>
-        <a routerLink="/rankings" routerLinkActive="active" (click)="closeMobileNav()">Ranking</a>
-        <a routerLink="/groups" routerLinkActive="active" (click)="closeMobileNav()">Grupos</a>
-        <a routerLink="/chat" routerLinkActive="active" (click)="closeMobileNav()">Chat</a>
-        <a routerLink="/notifications" routerLinkActive="active" (click)="closeMobileNav()">Notificações</a>
-        <a routerLink="/profile" routerLinkActive="active" class="profile-link" (click)="closeMobileNav()">Perfil</a>
-      </ng-template>
-    </nav>
-  </header>
+  <div class="app-content" [class.with-bottom-nav]="showShell && isAuthenticated()">
+    <router-outlet></router-outlet>
+  </div>
 
-  <router-outlet></router-outlet>
+  <footer class="app-footer" *ngIf="showShell">
+    <a class="footer-brand" routerLink="/" (click)="closeMenus()">BREADLE</a>
+    <span>Leitura com calma, propósito e progresso.</span>
+    <a routerLink="/books" (click)="closeMenus()">Explorar acervo</a>
+  </footer>
+
+  <nav class="mobile-bottom-nav" *ngIf="showShell && isAuthenticated()" aria-label="Atalhos principais">
+    <a routerLink="/dashboard" routerLinkActive="active" aria-label="Visão geral">
+      <span aria-hidden="true">⌂</span><small>Início</small>
+    </a>
+    <a routerLink="/books" routerLinkActive="active" aria-label="Acervo">
+      <span aria-hidden="true">▤</span><small>Livros</small>
+    </a>
+    <a routerLink="/missions" routerLinkActive="active" aria-label="Missões">
+      <span aria-hidden="true">✦</span><small>Metas</small>
+    </a>
+    <a routerLink="/library" routerLinkActive="active" aria-label="Minha biblioteca">
+      <span aria-hidden="true">▥</span><small>Biblioteca</small>
+    </a>
+  </nav>
 </div>

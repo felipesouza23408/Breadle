@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { apiUrl } from './api-url';
 
 export interface ReadingGroup {
   id: number;
@@ -60,61 +61,61 @@ export class GroupService {
   constructor(private http: HttpClient) {}
 
   list(): Observable<ReadingGroup[]> {
-    return this.http.get<ReadingGroup[]>('http://localhost:8080/api/groups', {
+    return this.http.get<ReadingGroup[]>(apiUrl('/api/groups'), {
       headers: this.getAuthHeaders(),
     });
   }
 
   myGroups(): Observable<ReadingGroup[]> {
-    return this.http.get<ReadingGroup[]>('http://localhost:8080/api/groups/me', {
+    return this.http.get<ReadingGroup[]>(apiUrl('/api/groups/me'), {
       headers: this.getAuthHeaders(),
     });
   }
 
   create(payload: CreateGroupPayload): Observable<ReadingGroup> {
-    return this.http.post<ReadingGroup>('http://localhost:8080/api/groups', payload, {
+    return this.http.post<ReadingGroup>(apiUrl('/api/groups'), payload, {
       headers: this.getAuthHeaders(),
     });
   }
 
   join(groupId: number): Observable<ReadingGroup> {
-    return this.http.post<ReadingGroup>(`http://localhost:8080/api/groups/${groupId}/join`, {}, {
+    return this.http.post<ReadingGroup>(apiUrl(`/api/groups/${groupId}/join`), {}, {
       headers: this.getAuthHeaders(),
     });
   }
 
   leaderboard(groupId: number): Observable<GroupLeaderboardEntry[]> {
-    return this.http.get<GroupLeaderboardEntry[]>(`http://localhost:8080/api/groups/${groupId}/leaderboard`, {
+    return this.http.get<GroupLeaderboardEntry[]>(apiUrl(`/api/groups/${groupId}/leaderboard`), {
       headers: this.getAuthHeaders(),
     });
   }
 
   challenges(groupId: number): Observable<GroupChallenge[]> {
-    return this.http.get<GroupChallenge[]>(`http://localhost:8080/api/groups/${groupId}/challenges`, {
+    return this.http.get<GroupChallenge[]>(apiUrl(`/api/groups/${groupId}/challenges`), {
       headers: this.getAuthHeaders(),
     });
   }
 
   createChallenge(groupId: number, payload: { title: string; description: string; targetPages: number }): Observable<GroupChallenge> {
-    return this.http.post<GroupChallenge>(`http://localhost:8080/api/groups/${groupId}/challenges`, payload, {
+    return this.http.post<GroupChallenge>(apiUrl(`/api/groups/${groupId}/challenges`), payload, {
       headers: this.getAuthHeaders(),
     });
   }
 
   activities(groupId: number): Observable<GroupActivity[]> {
-    return this.http.get<GroupActivity[]>(`http://localhost:8080/api/groups/${groupId}/activity`, {
+    return this.http.get<GroupActivity[]>(apiUrl(`/api/groups/${groupId}/activity`), {
       headers: this.getAuthHeaders(),
     });
   }
 
   messages(groupId: number): Observable<GroupChatMessage[]> {
-    return this.http.get<GroupChatMessage[]>(`http://localhost:8080/api/groups/${groupId}/chat`, {
+    return this.http.get<GroupChatMessage[]>(apiUrl(`/api/groups/${groupId}/chat`), {
       headers: this.getAuthHeaders(),
     });
   }
 
   sendMessage(groupId: number, content: string): Observable<GroupChatMessage> {
-    return this.http.post<GroupChatMessage>(`http://localhost:8080/api/groups/${groupId}/chat`, { content }, {
+    return this.http.post<GroupChatMessage>(apiUrl(`/api/groups/${groupId}/chat`), { content }, {
       headers: this.getAuthHeaders(),
     });
   }

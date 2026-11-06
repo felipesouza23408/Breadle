@@ -21,8 +21,9 @@ Breadle é uma plataforma de leitura gamificada e educativa criada para aumentar
 2. Inicie o backend:
    ```bash
    cd backend
-   ./mvnw spring-boot:run
+   .\mvnw.cmd spring-boot:run
    ```
+   No macOS ou Linux, use `./mvnw spring-boot:run`.
 3. Inicie o frontend:
    ```bash
    cd frontend
@@ -31,10 +32,11 @@ Breadle é uma plataforma de leitura gamificada e educativa criada para aumentar
    ```
 4. Abra `http://localhost:4200`.
 
-## Credenciais de exemplo
+Para produção, configure `apiBaseUrl` em `frontend/src/environments/environment.production.ts` com a origem do backend (por exemplo, `https://api.seudominio.com`, sem `/api`) antes de executar `npm run build` em `frontend`; deixe vazio se frontend e API forem servidos na mesma origem. A URL WebSocket é derivada automaticamente (`https` → `wss`). A execução local no Windows continua usando o comando acima.
 
-- E-mail: `lucas@breadle.com`
-- Senha: `123456`
+## Contas
+
+O cadastro público cria contas de leitor. Não há credenciais de demonstração fixas; configure uma conta administrativa apenas pelo mecanismo seguro de seed documentado no `.env.example`.
 
 ## Observação
 
@@ -47,6 +49,12 @@ O backend mantém as chaves do provedor de IA. Para ativar respostas de um model
 As perguntas e explicações devem se limitar ao trecho lido/selecionado para evitar spoilers. O uso tem um limite diário configurável por `AI_DAILY_LIMIT` (20 por padrão); a aplicação recusa novas solicitações quando a cota termina e a renova à meia-noite UTC. A cota atual é igual para todos os perfis, pois o cadastro ainda não possui integração de planos gratuito/Plus.
 
 Depois de atualizar o código, reinicie o backend: o Flyway aplicará automaticamente as migrations pendentes do banco local.
+
+### Avaliação estruturada da sessão
+
+No leitor, **Quiz da sessão** cria três perguntas variadas usando exclusivamente o texto oficial das páginas abertas e registradas naquela sessão. A criação é idempotente por sessão; as respostas são corrigidas no backend, e gabarito/rubrica não fazem parte das respostas públicas da API. A geração e a correção de respostas abertas usam a mesma cota diária da IA. O quiz fornece apenas feedback e não altera os pontos ganhos pela leitura.
+
+As rotas autenticadas são `POST /api/reading/sessions/{sessionId}/assessments` e `POST /api/reading/sessions/{sessionId}/assessments/{questionId}/answers`. Respostas múltipla escolha são corrigidas localmente; respostas abertas usam a abstração de IA. A migration Flyway V17 cria as tabelas da avaliação sem armazenar o texto completo do livro.
 
 ## Acervo de EPUBs
 

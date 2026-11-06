@@ -24,8 +24,9 @@ interface PersonalBook {
     <main class="library-page">
       <header class="page-header">
         <div>
-          <span class="eyebrow">Coleção</span>
-          <h1>Biblioteca pessoal</h1>
+          <span class="eyebrow">Sua leitura</span>
+          <h1>Minha biblioteca</h1>
+          <p class="page-description">Retome suas sessões e acompanhe o progresso das obras que você começou.</p>
         </div>
       </header>
 
@@ -45,11 +46,6 @@ interface PersonalBook {
           <span>Em progresso</span>
           <strong>{{ counts.emAndamento }}</strong>
           <small>Leituras em andamento</small>
-        </article>
-        <article class="summary-card green">
-          <span>Adquiridos</span>
-          <strong>—</strong>
-          <small>O acervo pessoal ainda não oferece aquisições</small>
         </article>
       </section>
 
@@ -84,7 +80,7 @@ interface PersonalBook {
       <section class="library-grid" *ngIf="!loading && !errorMessage && books.length">
         <div class="panel collection-panel">
           <div class="panel-header">
-            <h2>Minha coleção</h2>
+            <h2>Sua estante</h2>
             <span class="filter-pill">Sessões recentes</span>
           </div>
 
@@ -135,295 +131,7 @@ interface PersonalBook {
       </section>
     </main>
   `,
-  styles: [
-    `
-      :host { display: block; }
-      .library-page {
-        min-height: 100vh;
-        background: radial-gradient(circle at top left, rgba(214,169,74,0.17), transparent 14%),
-                    linear-gradient(180deg, #f5efe7 0%, #edf3f9 100%);
-        padding: 2rem;
-        color: #172033;
-      }
-      .page-header { margin-bottom: 1.5rem; }
-      .loading-state, .error-state, .empty-library { margin-bottom: 1.5rem; }
-      .loading-state { color: #d4d0da; }
-      .error-state, .empty-library { padding: 1.5rem; }
-      .error-state p, .empty-library p { color: #c5c0cd; line-height: 1.6; }
-      .empty-library h2 { margin: 0.5rem 0; }
-      .empty-filter { padding: 1rem 0.25rem 0; color: #c5c0cd; }
-      .eyebrow {
-        display: inline-block;
-        background: rgba(214,169,74,0.14);
-        border: 1px solid rgba(214,169,74,0.25);
-        color: #2b3b58;
-        border-radius: 999px;
-        padding: 0.45rem 0.7rem;
-        font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-      h1 { margin: 0.7rem 0 0; }
-      .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(180px, 1fr));
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-      }
-      .summary-card {
-        border-radius: 1.1rem;
-        padding: 1.2rem;
-        color: white;
-        box-shadow: 0 16px 32px rgba(23,32,51,0.08);
-      }
-      .summary-card.gold { background: linear-gradient(135deg, #1d2b42, #d6a94a); }
-      .summary-card.blue { background: linear-gradient(135deg, #294d73, #5c88bf); }
-      .summary-card.green { background: linear-gradient(135deg, #2a5d4b, #61a47f); }
-      .summary-card span,
-      .summary-card small { display: block; opacity: 0.9; }
-      .summary-card strong { display: block; font-size: 2rem; margin: 0.5rem 0; }
-      .panel {
-        background: rgba(255,255,255,0.9);
-        border: 1px solid rgba(23,32,51,0.06);
-        border-radius: 1.2rem;
-        padding: 1.3rem;
-        box-shadow: 0 16px 34px rgba(23,32,51,0.06);
-      }
-      .filters {
-        margin-bottom: 1.5rem;
-      }
-      .filter-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-      }
-      .micro-summary {
-        margin-bottom: 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-      }
-      .mini-label {
-        display: inline-block;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-size: 0.7rem;
-        font-weight: 800;
-        color: #597089;
-      }
-      .micro-summary h2 {
-        margin: 0.35rem 0 0;
-      }
-      .micro-actions {
-        display: flex;
-        gap: 0.75rem;
-        flex-wrap: wrap;
-      }
-      .filter-button,
-      .mini-button {
-        border: none;
-        border-radius: 999px;
-        padding: 0.6rem 0.9rem;
-        font-weight: 700;
-        cursor: pointer;
-      }
-      .filter-button {
-        background: #f1f4f8;
-        color: #2b3b58;
-      }
-      .filter-button.active {
-        background: linear-gradient(135deg, #d6a94a, #f1d98c);
-        color: #1e2b3f;
-      }
-      .mini-button {
-        background: linear-gradient(135deg, #1d2b42, #304e72);
-        color: white;
-      }
-      .mini-button.secondary {
-        background: rgba(214,169,74,0.12);
-        color: #2b3b58;
-        border: 1px solid rgba(214,169,74,0.25);
-      }
-      .library-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.8fr);
-        gap: 1rem;
-      }
-      .panel-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
-      }
-      .filter-pill {
-        background: rgba(214,169,74,0.12);
-        border-radius: 999px;
-        padding: 0.45rem 0.75rem;
-        color: #2b3b58;
-        font-weight: 700;
-      }
-      .book-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1rem;
-      }
-      .book-card {
-        display: flex;
-        gap: 0.9rem;
-        padding: 0.9rem;
-        border-radius: 1rem;
-        background: #f7f9fc;
-        border: 1px solid rgba(23,32,51,0.05);
-        cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-      }
-      .book-card:hover,
-      .book-card.selected {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(23,32,51,0.08);
-      }
-      .book-card.gold { border-left: 4px solid #d6a94a; }
-      .book-card.blue { border-left: 4px solid #5c88bf; }
-      .book-card.green { border-left: 4px solid #61a47f; }
-      .book-cover {
-        position: relative;
-        overflow: hidden;
-        width: 62px;
-        min-width: 62px;
-        height: 80px;
-        border-radius: 0.7rem;
-        background: linear-gradient(135deg, #1d2b42, #5473a2);
-        display: grid;
-        place-items: center;
-        color: white;
-        font-weight: 800;
-      }
-      .book-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-      .book-info {
-        flex: 1;
-        display: grid;
-        gap: 0.35rem;
-      }
-      .status {
-        background: rgba(214,169,74,0.12);
-        border-radius: 999px;
-        padding: 0.25rem 0.55rem;
-        font-size: 0.7rem;
-        font-weight: 700;
-        color: #2b3b58;
-        justify-self: start;
-      }
-      .book-info h3 { margin: 0; font-size: 1rem; }
-      .book-info small { color: #597089; }
-      .progress-row {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 0.55rem;
-        align-items: center;
-      }
-      .bar {
-        height: 8px;
-        background: #e7edf5;
-        border-radius: 999px;
-        overflow: hidden;
-      }
-      .bar span {
-        display: block;
-        height: 100%;
-        background: linear-gradient(90deg, #d6a94a, #7fa7d6);
-        border-radius: inherit;
-      }
-      .detail-panel {
-        padding: 1.2rem;
-      }
-      .detail-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 1rem;
-      }
-      .detail-tag {
-        display: inline-block;
-        font-size: 0.72rem;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: #597089;
-      }
-      .detail-header h3 { margin: 0.35rem 0 0; }
-      .detail-desc {
-        color: #314156;
-        line-height: 1.7;
-        margin: 0 0 1rem;
-      }
-      .detail-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        display: grid;
-        gap: 0.75rem;
-      }
-      .detail-list li {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-        background: #f8fafc;
-        border-radius: 0.8rem;
-        padding: 0.7rem 0.8rem;
-      }
-      .detail-list span { color: #597089; }
-      .library-page {
-        background: radial-gradient(ellipse at 95% 0%, rgba(37, 46, 224, .2), transparent 28rem), #08080b;
-        color: #f3f0f8;
-      }
-      .library-page h1, .library-page h2, .library-page h3 { color: #fff; }
-      .library-page .eyebrow, .library-page .mini-label, .library-page .detail-tag { color: #f1d779; }
-      .library-page .panel {
-        color: #f3f0f8;
-        background: #151519;
-        border: 1px solid rgba(255,255,255,.09);
-        box-shadow: 0 16px 34px rgba(0,0,0,.3);
-      }
-      .library-page .summary-card.gold { background: linear-gradient(120deg, #101016, #28231a 65%, #a37b20); }
-      .library-page .summary-card.blue { background: linear-gradient(120deg, #0c0c18, #151bd1); }
-      .library-page .summary-card.green { background: linear-gradient(120deg, #111514, #244837); }
-      .library-page .filter-button { color: #d4d0da; background: #222228; }
-      .library-page .filter-button.active { color: #17130b; background: linear-gradient(135deg, #d9ad39, #f1d779); }
-      .library-page .filter-pill { color: #f1d779; background: rgba(217,173,57,.13); }
-      .library-page .book-card { background: #1c1c22; border: 1px solid rgba(255,255,255,.08); }
-      .library-page .book-info small, .library-page .detail-desc { color: #c5c0cd; }
-      .library-page .detail-list li { background: #222228; }
-      .library-page .detail-list span { color: #aaa8b3; }
-      .library-page .mini-button.secondary { color: #f1d779; background: rgba(217,173,57,.12); border-color: rgba(217,173,57,.28); }
-      .library-page .error-state, .library-page .empty-library {
-        border: 1px solid rgba(255,255,255,.09);
-        border-radius: 1.2rem;
-        background: #151519;
-        box-shadow: 0 16px 34px rgba(0,0,0,.3);
-      }
-      .library-page .empty-filter { color: #c5c0cd; }
-      .mini-button {
-        display: inline-block;
-        border: 0;
-        text-decoration: none;
-        font: inherit;
-      }
-      @media (max-width: 760px) {
-        .summary-grid,
-        .library-grid {
-          grid-template-columns: 1fr;
-        }
-        .micro-summary {
-          flex-direction: column;
-          align-items: flex-start;
-        }
-      }
-    `,
-  ],
+
 })
 export class LibraryComponent implements OnInit {
   selectedStatus: 'todos' | 'Lido' | 'Em progresso' = 'todos';

@@ -4,19 +4,19 @@ public class StudentProgressDto {
     private Long userId;
     private String nome;
     private String email;
-    private int pontosTotais;
+    private long pontosEducacionais;
     private long livrosConcluidos;
     private int progressoSemanal;
 
     public StudentProgressDto() {
     }
 
-    public StudentProgressDto(Long userId, String nome, String email, int pontosTotais,
+    public StudentProgressDto(Long userId, String nome, String email, long pontosEducacionais,
                              long livrosConcluidos, int progressoSemanal) {
         this.userId = userId;
         this.nome = nome;
         this.email = email;
-        this.pontosTotais = pontosTotais;
+        this.pontosEducacionais = pontosEducacionais;
         this.livrosConcluidos = livrosConcluidos;
         this.progressoSemanal = progressoSemanal;
     }
@@ -45,12 +45,12 @@ public class StudentProgressDto {
         this.nome = nome;
     }
 
-    public int getPontosTotais() {
-        return pontosTotais;
+    public long getPontosEducacionais() {
+        return pontosEducacionais;
     }
 
-    public void setPontosTotais(int pontosTotais) {
-        this.pontosTotais = pontosTotais;
+    public void setPontosEducacionais(long pontosEducacionais) {
+        this.pontosEducacionais = pontosEducacionais;
     }
 
     public long getLivrosConcluidos() {
