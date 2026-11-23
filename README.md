@@ -107,6 +107,21 @@ O código do Git **não inclui** o banco de dados. O banco fica em um volume loc
 
 O pacote não inclui EPUBs que estejam fora de `backend\storage`, nem segredos de IA ou de SMTP. Para ativar serviços externos, configure suas credenciais separadamente como variáveis locais seguras; isso não é necessário para iniciar o projeto.
 
+## Validar alterações
+
+Com JDK 25 e Node.js 24 instalados, execute:
+
+```powershell
+cd backend
+.\mvnw.cmd verify
+cd ..\frontend
+npm test -- --watch=false
+npm run build
+npm audit
+```
+
+O aviso CommonJS do cliente STOMP é conhecido e permitido explicitamente na configuração Angular; os demais pacotes não devem apresentar vulnerabilidades na auditoria npm.
+
 Para produção, configure `apiBaseUrl` em `frontend/src/environments/environment.production.ts` com a origem do backend (por exemplo, `https://api.seudominio.com`, sem `/api`) antes de executar `npm run build` em `frontend`; deixe vazio se frontend e API forem servidos na mesma origem. A URL WebSocket é derivada automaticamente (`https` → `wss`). A execução local no Windows continua usando o comando acima.
 
 ## Contas
