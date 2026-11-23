@@ -30,14 +30,13 @@ try {
         return
     }
 
-    if (-not (Test-Path '.env')) {
-        throw 'Arquivo .env nao encontrado. Execute primeiro scripts\prepare-windows.ps1.'
-    }
-
     $dbUsername = 'breadle'
-    $usernameLine = Get-Content '.env' | Where-Object { $_ -match '^DB_USERNAME=' } | Select-Object -First 1
-    if ($usernameLine) {
-        $dbUsername = $usernameLine.Substring('DB_USERNAME='.Length)
+    $envPath = Join-Path $projectRoot '.env'
+    if (Test-Path $envPath) {
+        $usernameLine = Get-Content $envPath | Where-Object { $_ -match '^DB_USERNAME=' } | Select-Object -First 1
+        if ($usernameLine) {
+            $dbUsername = $usernameLine.Substring('DB_USERNAME='.Length)
+        }
     }
 
     docker compose up -d postgres

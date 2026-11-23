@@ -15,44 +15,38 @@ if ($LASTEXITCODE -ne 0) {
     throw 'O Docker Desktop nao esta iniciado. Abra-o, aguarde ficar pronto e tente novamente.'
 }
 
-if (-not (Test-Path '.env')) {
-    Copy-Item '.env.example' '.env'
-    $envLines = Get-Content '.env'
-    $dbPasswordBytes = New-Object byte[] 32
-    $jwtSecretBytes = New-Object byte[] 32
+$javaVersionOutput = (& java -version 2>&1 | Out-String)
+$javaVersionMatch = [regex]::Match($javaVersionOutput, 'version "(?<major>\d+)')
+if (-not $javaVersionMatch.Success -or [int]$javaVersionMatch.Groups['major'].Value -lt 25) {
+    throw 'Este projeto requer JDK 25 ou superior. Instale o JDK 25, ajuste JAVA_HOME/PATH e execute novamente.'
+}
+
+$localSecretsPath = Join-Path $projectRoot 'backend\local-secrets.properties'
+if (-not (Test-Path $localSecretsPath)) {
+    $jwtSecretBytes = New-Object byte[] 48
     $random = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     try {
-        $random.GetBytes($dbPasswordBytes)
         $random.GetBytes($jwtSecretBytes)
     }
     finally {
         $random.Dispose()
     }
 
-    $dbPassword = [Convert]::ToBase64String($dbPasswordBytes)
     $jwtSecret = [Convert]::ToBase64String($jwtSecretBytes)
-    $envLines = $envLines | ForEach-Object {
-        if ($_ -match '^DB_PASSWORD=') {
-            "DB_PASSWORD=$dbPassword"
-        }
-        elseif ($_ -match '^JWT_SECRET=') {
-            "JWT_SECRET=$jwtSecret"
-        }
-        else {
-            $_
-        }
-    }
     $utf8WithoutBom = New-Object -TypeName System.Text.UTF8Encoding -ArgumentList $false
-    [System.IO.File]::WriteAllLines((Join-Path $projectRoot '.env'), $envLines, $utf8WithoutBom)
-    Write-Output 'Arquivo .env criado com segredos locais aleatorios.'
+    [System.IO.File]::WriteAllText($localSecretsPath, "jwt.secret=$jwtSecret`n", $utf8WithoutBom)
+    Write-Output 'Segredo local de autenticação criado em backend\local-secrets.properties.'
 }
 else {
-    Write-Output 'Arquivo .env existente preservado.'
+    Write-Output 'Segredo local de autenticação existente preservado.'
 }
 
-$usernameLine = Get-Content '.env' | Where-Object { $_ -match '^DB_USERNAME=' } | Select-Object -First 1
-if ($usernameLine) {
-    $dbUsername = $usernameLine.Substring('DB_USERNAME='.Length)
+$envPath = Join-Path $projectRoot '.env'
+if (Test-Path $envPath) {
+    $usernameLine = Get-Content $envPath | Where-Object { $_ -match '^DB_USERNAME=' } | Select-Object -First 1
+    if ($usernameLine) {
+        $dbUsername = $usernameLine.Substring('DB_USERNAME='.Length)
+    }
 }
 
 Push-Location 'frontend'

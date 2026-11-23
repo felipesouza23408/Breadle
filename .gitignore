@@ -4,4 +4,5 @@
 
 backend/java.args
 backend/javac.args
+/backend/local-secrets.properties
 docs/_todos_docs_utf8.txt

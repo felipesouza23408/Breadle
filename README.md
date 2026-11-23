@@ -5,73 +5,113 @@ Breadle é uma plataforma de leitura gamificada e educativa criada para aumentar
 ## Stack obrigatória
 
 - Frontend: Angular + TypeScript + HTML + CSS
-- Backend: Java 21 + Spring Boot 3.x + Maven + Spring Data JPA + Hibernate + Spring Security
+- Backend: Java 25 + Spring Boot 3.x + Maven + Spring Data JPA + Hibernate + Spring Security
 - Banco: PostgreSQL em Docker Compose
 - Autenticação: JWT com Spring Security
 - Comunicação em tempo real: WebSocket/STOMP
 - Arquivos: interface `FileStorageService` com implementação local (troca futura por MinIO/S3)
 - Migrations: Flyway
 
-## Como executar
+## Como instalar e iniciar (Windows)
 
-1. Inicie os serviços de infraestrutura:
-   ```bash
-   docker compose up -d
-   ```
-2. Inicie o backend:
-   ```bash
-   cd backend
-   .\mvnw.cmd spring-boot:run
-   ```
-   No macOS ou Linux, use `./mvnw spring-boot:run`.
-3. Inicie o frontend:
-   ```bash
-   cd frontend
-   npm install
-   npm start
-   ```
-4. Abra `http://localhost:4200`.
+### 1. Instale os programas necessários
 
-## Transportar o projeto para outro computador (Windows)
+- **Git** para baixar o código.
+- **Docker Desktop** para executar PostgreSQL e Mailpit. Baixe-o do [site oficial do Docker](https://www.docker.com/products/docker-desktop/), instale e reinicie o Windows se o instalador solicitar. Se o Docker pedir para instalar/ativar WSL 2, aceite e siga as instruções exibidas.
+- **JDK 25** e **Node.js 24** para executar backend e frontend.
 
-O Git leva o código, mas não o banco do Docker, os arquivos locais de livros nem o `.env`. Para levar também os dados:
+Abra o Docker Desktop e espere ele indicar que o mecanismo (engine) está em execução. O Docker Desktop precisa estar aberto enquanto você usa o Breadle.
 
-1. No computador atual, com o Docker Desktop aberto e o PostgreSQL do Breadle em execução, crie um pacote:
+### 2. Baixe o código
+
+Abra o PowerShell na pasta onde deseja guardar o projeto e execute:
+
+```powershell
+git clone --branch feature/melhorias-gerais https://github.com/felipesouza23408/Breadle.git
+cd Breadle
+```
+
+### 3. Prepare o projeto
+
+Na pasta `Breadle`, execute:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\prepare-windows.ps1
+```
+
+O script cria uma chave de segurança local, instala as dependências do frontend e baixa/inicia automaticamente os containers do PostgreSQL e Mailpit. Na primeira execução, aguarde terminar. Não é necessário criar ou editar `.env`. Se houver um `.env` de uma instalação anterior, não o apague: ele pode conter configurações necessárias para o banco local já existente.
+
+### 4. Inicie backend e frontend
+
+Abra **dois terminais** na pasta `Breadle`.
+
+No primeiro terminal, inicie o backend:
+
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run
+```
+
+No segundo terminal, inicie o frontend:
+
+```powershell
+cd frontend
+npm start
+```
+
+Quando os dois comandos estiverem rodando, abra [http://localhost:4200](http://localhost:4200) no navegador. Para parar, encerre os dois comandos com `Ctrl+C`; os dados do PostgreSQL permanecem guardados no volume do Docker. `docker compose down` para os containers, mas também preserva esse volume.
+
+## Levar também os dados do Docker para outro computador (Windows)
+
+O código do Git **não inclui** o banco de dados. O banco fica em um volume local do Docker, que não é transferido ao copiar ou clonar o repositório. O procedimento abaixo exporta o banco para um ZIP e o importa no Docker do outro computador; não é necessário copiar o container ou o volume manualmente.
+
+### No computador antigo: criar e copiar o pacote
+
+1. Abra o Docker Desktop e espere o mecanismo indicar que está em execução.
+2. Abra o PowerShell na pasta `Breadle` e execute:
+
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\scripts\backup-windows.ps1
    ```
-   O arquivo ZIP aparecerá em `backups`. Copie-o para um local seguro, como um disco externo. Ele contém o banco e `backend\storage`, mas não contém segredos. O ZIP não é criptografado e pode conter dados pessoais: proteja-o e apague cópias quando não precisar mais delas.
-2. No novo computador, instale Git, Docker Desktop, Java 21 e Node.js compativel com o projeto; inicie o Docker Desktop.
-3. Clone esta branch e prepare o projeto:
+
+3. Aguarde a mensagem `Backup criado`. O ZIP estará dentro de `Breadle\backups` e conterá uma exportação do PostgreSQL e os arquivos em `backend\storage`.
+4. Copie esse ZIP para um pendrive ou outro local acessível no computador novo. O pacote pode conter dados pessoais, não é criptografado e não inclui segredos; guarde-o com cuidado e apague cópias quando não precisar mais delas.
+
+### No computador novo: instalar, importar o banco e iniciar
+
+1. Instale Git, Docker Desktop, JDK 25 e Node.js 24 conforme a seção anterior. Abra o Docker Desktop e espere o mecanismo ficar pronto.
+2. No PowerShell, clone o projeto:
+
    ```powershell
    git clone --branch feature/melhorias-gerais https://github.com/felipesouza23408/Breadle.git
    cd Breadle
+   ```
+
+3. Copie o ZIP do pendrive para a pasta `Breadle\backups`. Se a pasta não existir, crie-a pelo Explorador de Arquivos.
+4. Prepare o projeto:
+
+   ```powershell
    powershell -ExecutionPolicy Bypass -File .\scripts\prepare-windows.ps1
    ```
-   O preparo cria `.env` com segredos locais se ele ainda não existir, instala as dependências do frontend e inicia PostgreSQL e Mailpit.
-4. Copie o ZIP para a pasta `backups` do projeto (ou informe o caminho completo) e restaure:
+
+   Esse comando cria um novo container PostgreSQL e seu volume vazio, além de instalar as dependências.
+
+5. No terminal, digite `dir .\backups` para ver o nome exato do ZIP. Use esse nome no comando abaixo, substituindo `breadle-backup-AAAAmmdd-HHmmss.zip`:
+
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\scripts\restore-windows.ps1 -BackupPath .\backups\breadle-backup-AAAAmmdd-HHmmss.zip
    ```
-   A restauração pede confirmação antes de substituir os dados atuais do banco e sobrescrever arquivos homônimos de `backend\storage`.
-5. Inicie o backend e o frontend em terminais separados:
-   ```powershell
-   cd backend
-   .\mvnw.cmd spring-boot:run
-   ```
-   ```powershell
-   cd frontend
-   npm start
-   ```
-   Acesse `http://localhost:4200`. Para parar os servicos, encerre os terminais e execute `docker compose down` na pasta do projeto; os dados do banco permanecem no volume Docker.
 
-Se precisar manter as mesmas configurações de IA ou SMTP, transfira o `.env` separadamente por um meio seguro. Nunca coloque esse arquivo no ZIP ou no Git. Um `.env` novo gera outra chave JWT: contas e dados restaurados continuam no banco, mas tokens de login antigos deixam de valer e será necessário entrar novamente. O backup não inclui arquivos EPUB que estejam fora de `backend\storage`.
+6. Quando aparecer o pedido de confirmação, digite `RESTAURAR` e pressione Enter. Isso importa os dados no container novo e copia os livros de `backend\storage`. A operação substitui os dados que já existirem no banco de destino.
+7. Inicie o backend e o frontend em dois terminais, seguindo a seção **Inicie backend e frontend** acima. Entre novamente na sua conta; tokens de login antigos não são transferidos.
+
+O pacote não inclui EPUBs que estejam fora de `backend\storage`, nem segredos de IA ou de SMTP. Para ativar serviços externos, configure suas credenciais separadamente como variáveis locais seguras; isso não é necessário para iniciar o projeto.
 
 Para produção, configure `apiBaseUrl` em `frontend/src/environments/environment.production.ts` com a origem do backend (por exemplo, `https://api.seudominio.com`, sem `/api`) antes de executar `npm run build` em `frontend`; deixe vazio se frontend e API forem servidos na mesma origem. A URL WebSocket é derivada automaticamente (`https` → `wss`). A execução local no Windows continua usando o comando acima.
 
 ## Contas
 
-O cadastro público cria contas de leitor. Não há credenciais de demonstração fixas; configure uma conta administrativa apenas pelo mecanismo seguro de seed documentado no `.env.example`.
+O cadastro público cria contas de leitor. Não há credenciais de demonstração fixas nem configuração administrativa de seed neste projeto.
 
 ## Observação
 
@@ -79,7 +119,7 @@ Este repositório contém uma base funcional para iniciar o projeto, alinhada ao
 
 ## Assistente de leitura
 
-O backend mantém as chaves do provedor de IA. Para ativar respostas de um modelo externo, configure `OPENAI_API_KEY` e `AI_ENABLED=true` no arquivo `.env` local (nunca publique esse arquivo). Sem uma chave válida, o Breadle informa que está usando o modo local, que oferece roteiros de reflexão sem fingir que fez uma análise automática.
+O backend mantém as chaves do provedor de IA. Para ativar respostas de um modelo externo, configure `OPENAI_API_KEY` e `AI_ENABLED=true` como variáveis opcionais do ambiente do backend. Sem uma chave válida, o Breadle informa que está usando o modo local, que oferece roteiros de reflexão sem fingir que fez uma análise automática.
 
 As perguntas e explicações devem se limitar ao trecho lido/selecionado para evitar spoilers. O uso tem um limite diário configurável por `AI_DAILY_LIMIT` (20 por padrão); a aplicação recusa novas solicitações quando a cota termina e a renova à meia-noite UTC. A cota atual é igual para todos os perfis, pois o cadastro ainda não possui integração de planos gratuito/Plus.
 
@@ -97,6 +137,6 @@ O backend importa os arquivos `.epub` que estiverem diretamente na pasta `Downlo
 
 ## Redefinição de senha por e-mail
 
-O login oferece o fluxo **Esqueci minha senha**. O Docker Compose inclui o Mailpit para testes locais: mantenha no `.env` `MAIL_HOST=localhost`, `MAIL_PORT=1025`, `MAIL_SMTP_AUTH=false` e `MAIL_SMTP_STARTTLS=false`, inicie os serviços com `docker compose up -d` e veja os e-mails enviados em `http://localhost:8025`. Configure também `FRONTEND_URL` para o endereço do Angular (localmente, `http://localhost:4200`).
+O login oferece o fluxo **Esqueci minha senha**. O Docker Compose inclui o Mailpit para testes locais e o backend já aponta para ele por padrão. Inicie os serviços com `docker compose up -d` e veja os e-mails enviados em `http://localhost:8025`. Configure `FRONTEND_URL` apenas se o frontend usar outro endereço (localmente, `http://localhost:4200`).
 
 Em produção, substitua as configurações Mailpit pelas credenciais do seu provedor SMTP (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SMTP_AUTH`, `MAIL_SMTP_STARTTLS` e `MAIL_FROM`). Não publique credenciais SMTP. O link expira em 30 minutos, só pode ser usado uma vez e o banco armazena apenas o hash do token. O endpoint de solicitação retorna a mesma confirmação para e-mails cadastrados e não cadastrados, e limita o envio a um e-mail por conta a cada minuto.

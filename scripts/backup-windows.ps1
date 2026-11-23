@@ -6,19 +6,18 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $projectRoot
 
-if (-not (Test-Path '.env')) {
-    throw 'Arquivo .env nao encontrado. Prepare o projeto antes de criar um backup.'
-}
-
 docker compose up -d postgres
 if ($LASTEXITCODE -ne 0) {
     throw 'Nao foi possivel iniciar o PostgreSQL do projeto.'
 }
 
 $dbUsername = 'breadle'
-$usernameLine = Get-Content '.env' | Where-Object { $_ -match '^DB_USERNAME=' } | Select-Object -First 1
-if ($usernameLine) {
-    $dbUsername = $usernameLine.Substring('DB_USERNAME='.Length)
+$envPath = Join-Path $projectRoot '.env'
+if (Test-Path $envPath) {
+    $usernameLine = Get-Content $envPath | Where-Object { $_ -match '^DB_USERNAME=' } | Select-Object -First 1
+    if ($usernameLine) {
+        $dbUsername = $usernameLine.Substring('DB_USERNAME='.Length)
+    }
 }
 
 if ([System.IO.Path]::IsPathRooted($OutputDirectory)) {
